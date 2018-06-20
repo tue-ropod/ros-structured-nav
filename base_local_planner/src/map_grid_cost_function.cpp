@@ -43,14 +43,16 @@ MapGridCostFunction::MapGridCostFunction(costmap_2d::Costmap2D* costmap,
     double xshift,
     double yshift,
     bool is_local_goal_function,
-    CostAggregationType aggregationType) :
+    CostAggregationType aggregationType,
+    double path_distance_max) :
     costmap_(costmap),
     map_(costmap->getSizeInCellsX(), costmap->getSizeInCellsY()),
     aggregationType_(aggregationType),
     xshift_(xshift),
     yshift_(yshift),
     is_local_goal_function_(is_local_goal_function),
-    stop_on_failure_(true) {}
+    stop_on_failure_(true),
+    path_distance_max_(path_distance_max) {}
 
 void MapGridCostFunction::setTargetPoses(std::vector<geometry_msgs::PoseStamped> target_poses) {
   target_poses_ = target_poses;
@@ -110,6 +112,15 @@ double MapGridCostFunction::scoreTrajectory(Trajectory &traj) {
         return -2.0;
       }
     }
+    
+  
+    // Do not allow trajectories that go outside a tube around the global path
+    if(!is_local_goal_function_ && path_distance_max_> 0.001 && grid_dist > (path_distance_max_/costmap_->getResolution()) ){       
+       ROS_WARN("path_distance_max_: %f, grid_dist: %f",path_distance_max_, grid_dist*costmap_->getResolution());
+      return -4.0;
+    }
+    
+    
 
     switch( aggregationType_ ) {
     case Last:
@@ -123,6 +134,12 @@ double MapGridCostFunction::scoreTrajectory(Trajectory &traj) {
         cost *= grid_dist;
       }
       break;
+    case Max:
+      if (grid_dist > cost){
+	cost = grid_dist;
+      }
+      break;
+    
     }
   }
   return cost;

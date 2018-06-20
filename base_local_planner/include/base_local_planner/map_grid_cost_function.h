@@ -50,7 +50,7 @@ namespace base_local_planner {
  *return the value of the last point (if no of the earlier points were in
  * return collision), the sum for all points, or the product of all (non-zero) points
  */
-enum CostAggregationType { Last, Sum, Product};
+enum CostAggregationType { Last, Sum, Product, Max};
 
 /**
  * This class provides cost based on a map_grid of a small area of the world.
@@ -69,6 +69,7 @@ enum CostAggregationType { Last, Sum, Product};
  * @param yshift where the scoring point is with respect to robot center pose
  * @param is_local_goal_function, scores for local goal rather than whole path
  * @param aggregationType how to combine costs along trajectory
+ * @param max_grid_dist maximum trajectory deviation allowed along trajectory
  */
 class MapGridCostFunction: public base_local_planner::TrajectoryCostFunction {
 public:
@@ -76,7 +77,8 @@ public:
       double xshift = 0.0,
       double yshift = 0.0,
       bool is_local_goal_function = false,
-      CostAggregationType aggregationType = Last);
+      CostAggregationType aggregationType = Last,
+      double path_distance_max = 0.0);
 
   ~MapGridCostFunction() {}
 
@@ -133,6 +135,7 @@ private:
   // if true, we look for a suitable local goal on path, else we use the full path for costs
   bool is_local_goal_function_;
   bool stop_on_failure_;
+  double path_distance_max_;
 };
 
 } /* namespace base_local_planner */

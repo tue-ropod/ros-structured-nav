@@ -66,6 +66,8 @@ namespace dwa_local_planner {
     // pdistscale used for both path and alignment, set  forward_point_distance to zero to discard alignment
     path_costs_.setScale(resolution * pdist_scale_ * 0.5);
     alignment_costs_.setScale(resolution * pdist_scale_ * 0.5);
+    
+    path_distance_max_= config.path_distance_max;
 
     gdist_scale_ = config.goal_distance_bias;
     goal_costs_.setScale(resolution * gdist_scale_ * 0.5);
@@ -118,10 +120,10 @@ namespace dwa_local_planner {
   DWAPlanner::DWAPlanner(std::string name, base_local_planner::LocalPlannerUtil *planner_util) :
       planner_util_(planner_util),
       obstacle_costs_(planner_util->getCostmap()),
-      path_costs_(planner_util->getCostmap()),
+      path_costs_(planner_util->getCostmap(), 0.0, 0.0, false,  base_local_planner::Max, 0.1 ),
       goal_costs_(planner_util->getCostmap(), 0.0, 0.0, true),
       goal_front_costs_(planner_util->getCostmap(), 0.0, 0.0, true),
-      alignment_costs_(planner_util->getCostmap())
+      alignment_costs_(planner_util->getCostmap())      
   {
     ros::NodeHandle private_nh("~/" + name);
 
@@ -145,6 +147,8 @@ namespace dwa_local_planner {
       }
     }
     ROS_INFO("Sim period is set to %.2f", sim_period_);
+         
+    
 
     oscillation_costs_.resetOscillationFlags();
 

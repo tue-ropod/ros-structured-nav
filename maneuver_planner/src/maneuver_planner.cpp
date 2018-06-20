@@ -2,7 +2,7 @@
 *
 * Software License Agreement (BSD License)
 *
-*  Copyright (c) 2008, Willow Garage, Inc.
+*  Copyright (c) 2018, TU/e
 *  All rights reserved.
 *
 *  Redistribution and use in source and binary forms, with or without
@@ -32,25 +32,25 @@
 *  ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 *  POSSIBILITY OF SUCH DAMAGE.
 *
-* Authors: Eitan Marder-Eppstein, Sachin Chitta
+* Authors: Cesar lopez
 *********************************************************************/
-#include <carrot_planner/carrot_planner.h>
+#include <maneuver_planner/maneuver_planner.h>
 #include <pluginlib/class_list_macros.h>
 
 //register this planner as a BaseGlobalPlanner plugin
-PLUGINLIB_EXPORT_CLASS(carrot_planner::CarrotPlanner, nav_core::BaseGlobalPlanner)
+PLUGINLIB_EXPORT_CLASS(maneuver_planner::ManeuverPlanner, nav_core::BaseGlobalPlanner)
 
-namespace carrot_planner {
+namespace maneuver_planner {
 
-  CarrotPlanner::CarrotPlanner()
+  ManeuverPlanner::ManeuverPlanner()
   : costmap_ros_(NULL), initialized_(false){}
 
-  CarrotPlanner::CarrotPlanner(std::string name, costmap_2d::Costmap2DROS* costmap_ros)
+  ManeuverPlanner::ManeuverPlanner(std::string name, costmap_2d::Costmap2DROS* costmap_ros)
   : costmap_ros_(NULL), initialized_(false){
     initialize(name, costmap_ros);
   }
   
-  void CarrotPlanner::initialize(std::string name, costmap_2d::Costmap2DROS* costmap_ros){
+  void ManeuverPlanner::initialize(std::string name, costmap_2d::Costmap2DROS* costmap_ros){
     if(!initialized_){
       costmap_ros_ = costmap_ros;
       costmap_ = costmap_ros_->getCostmap();
@@ -67,7 +67,7 @@ namespace carrot_planner {
   }
 
   //we need to take the footprint of the robot into account when we calculate cost to obstacles
-  double CarrotPlanner::footprintCost(double x_i, double y_i, double theta_i){
+  double ManeuverPlanner::footprintCost(double x_i, double y_i, double theta_i){
     if(!initialized_){
       ROS_ERROR("The planner has not been initialized, please call initialize() to use the planner");
       return -1.0;
@@ -84,7 +84,7 @@ namespace carrot_planner {
   }
 
 
-  bool CarrotPlanner::makePlan(const geometry_msgs::PoseStamped& start, 
+  bool ManeuverPlanner::makePlan(const geometry_msgs::PoseStamped& start, 
       const geometry_msgs::PoseStamped& goal, std::vector<geometry_msgs::PoseStamped>& plan){
 
     if(!initialized_){

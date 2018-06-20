@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 2.8.3)
-project(carrot_planner)
+project(maneuver_planner)
 
 find_package(catkin REQUIRED
         COMPONENTS
@@ -19,7 +19,7 @@ add_definitions(${EIGEN3_DEFINITIONS})
 
 catkin_package(
     INCLUDE_DIRS include
-    LIBRARIES carrot_planner
+    LIBRARIES maneuver_planner
     CATKIN_DEPENDS
         roscpp
         pluginlib
@@ -28,13 +28,13 @@ catkin_package(
         nav_core
 )
 
-add_library(carrot_planner src/carrot_planner.cpp)
-add_dependencies(carrot_planner ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
-target_link_libraries(carrot_planner
+add_library(maneuver_planner src/maneuver_planner.cpp)
+add_dependencies(maneuver_planner ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+target_link_libraries(maneuver_planner
     ${catkin_LIBRARIES}
     )
 
-install(TARGETS carrot_planner
+install(TARGETS maneuver_planner
        ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
        LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
        )

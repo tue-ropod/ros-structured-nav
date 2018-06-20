@@ -1,19 +1,17 @@
 <package>
-    <name>carrot_planner</name>
-    <version>1.14.3</version>
+    <name>maneuver_planner</name>
+    <version>0.0.1</version>
     <description>
 
-        This planner attempts to find a legal place to put a carrot for the robot to follow. It does this by moving back along the vector between the robot and the goal point.
+        Plans a maeouver based on the destination position orientation and current position of a rectangular differential drive robot
 
     </description>
-    <author>Eitan Marder-Eppstein</author>
-    <author>Sachin Chitta</author>
-    <author>contradict@gmail.com</author>
-    <maintainer email="davidvlu@gmail.com">David V. Lu!!</maintainer>
-    <maintainer email="mfergs7@gmail.com">Michael Ferguson</maintainer>
-    <maintainer email="ahoy@fetchrobotics.com">Aaron Hoy</maintainer>
+    <author>Cesar Lopez</author>
+    <author>cesar.lopez.mar@gmail.com</author>
+    <maintainer email="cesar.lopez.mar@gmail.com">Cesar Lopez</maintainer>
+
     <license>BSD</license>
-    <url>http://wiki.ros.org/carrot_planner</url>
+    <url></url>
 
     <buildtool_depend>catkin</buildtool_depend>
 

@@ -34,8 +34,8 @@
 *
 * Author: Eitan Marder-Eppstein
 *********************************************************************/
-#ifndef CARROT_PLANNER_H_
-#define CARROT_PLANNER_H_
+#ifndef MANEUVER_PLANNER_H_
+#define MANEUVER_PLANNER_H_
 #include <ros/ros.h>
 #include <costmap_2d/costmap_2d_ros.h>
 #include <costmap_2d/costmap_2d.h>
@@ -50,26 +50,26 @@
 #include <base_local_planner/world_model.h>
 #include <base_local_planner/costmap_model.h>
 
-namespace carrot_planner{
+namespace maneuver_planner{
   /**
-   * @class CarrotPlanner
+   * @class ManeuverPlanner
    * @brief Provides a simple global planner that will compute a valid goal point for the local planner by walking back along the vector between the robot and the user-specified goal point until a valid cost is found.
    */
-  class CarrotPlanner : public nav_core::BaseGlobalPlanner {
+  class ManeuverPlanner : public nav_core::BaseGlobalPlanner {
     public:
       /**
-       * @brief  Constructor for the CarrotPlanner
+       * @brief  Constructor for the ManeuverPlanner
        */
-      CarrotPlanner();
+      ManeuverPlanner();
       /**
-       * @brief  Constructor for the CarrotPlanner
+       * @brief  Constructor for the ManeuverPlanner
        * @param  name The name of this planner
        * @param  costmap_ros A pointer to the ROS wrapper of the costmap to use for planning
        */
-      CarrotPlanner(std::string name, costmap_2d::Costmap2DROS* costmap_ros);
+      ManeuverPlanner(std::string name, costmap_2d::Costmap2DROS* costmap_ros);
 
       /**
-       * @brief  Initialization function for the CarrotPlanner
+       * @brief  Initialization function for the ManeuverPlanner
        * @param  name The name of this planner
        * @param  costmap_ros A pointer to the ROS wrapper of the costmap to use for planning
        */

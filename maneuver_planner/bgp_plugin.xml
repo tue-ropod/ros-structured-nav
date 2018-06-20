@@ -1,0 +1,7 @@
+<library path="lib/libmaneuver_planner">
+  <class name="maneuver_planner/ManeuverPlanner" type="maneuver_planner::ManeuverPlanner" base_class_type="nav_core::BaseGlobalPlanner">
+    <description>
+       Plans a maeouver based on the destination position orientation and current position of a rectangular differential drive robot
+    </description>
+  </class>
+</library>

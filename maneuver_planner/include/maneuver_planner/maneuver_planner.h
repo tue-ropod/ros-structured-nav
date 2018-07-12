@@ -50,6 +50,9 @@
 #include <base_local_planner/world_model.h>
 #include <base_local_planner/costmap_model.h>
 
+#include <armadillo>
+#include <math.h>
+
 namespace maneuver_planner{
   /**
    * @class ManeuverPlanner
@@ -90,6 +93,38 @@ namespace maneuver_planner{
       double step_size_, min_dist_from_robot_;
       costmap_2d::Costmap2D* costmap_;
       base_local_planner::WorldModel* world_model_; ///< @brief The world model that the controller will use
+      
+      // Rectangular robot points
+      arma::mat topRightCorner_;
+      arma::mat topLeftCorner_;
+      arma::mat bottomRightCorner_;
+      arma::mat bottomLeftCorner_;
+      arma::mat right_side_ref_point_;
+      arma::mat left_side_ref_point_;
+      arma::mat motion_refpoint_virvel_loctrajframe_;
+      arma::mat motion_refpoint_virvel_robotframe_;
+      arma::mat prev_motion_refpoint_localtraj_;
+      arma::mat motion_refpoint_localtraj_;
+      arma::mat center_pose_loctrajframe_;
+      arma::mat center_vel_robotframe_;
+     // arma::mat prev_center_refpoint_localtraj_;
+      arma::mat jacobian_topRightCorner_;
+      arma::mat jacobian_topLeftCorner_;
+      arma::mat jacobian_bottomRightCorner_;
+      arma::mat jacobian_bottomLeftCorner_;      
+      arma::mat jacobian_motrefPoint_;
+      
+      geometry_msgs::PoseStamped top_right_corner_;
+      
+      // Maneuver parameters
+      double turning_radius_;
+      bool last_goal_as_start_;
+      
+      // internal variables
+      geometry_msgs::PoseStamped last_goal_;
+      geometry_msgs::PoseStamped start_;
+      bool valid_last_goal_;
+      
 
       /**
        * @brief  Checks the legality of the robot footprint at a position and orientation using the world model
@@ -99,7 +134,22 @@ namespace maneuver_planner{
        * @return 
        */
       double footprintCost(double x_i, double y_i, double theta_i);
+      
+      void rotate2D(const tf::Stamped<tf::Pose> &pose_tf_in, const double theta, tf::Stamped<tf::Pose> &pose_tf_out);
+      void translate2D(const tf::Stamped<tf::Pose> &pose_tf_in, const tf::Vector3 &vector3_translation, tf::Stamped<tf::Pose> &pose_tf_out);
+      int  computeCurveParameters(const tf::Stamped<tf::Pose>& pose_target, const double& turning_radius, double &dist_before_steering, double &dist_after_steering, double &signed_turning_radius);
+      enum ManeuverType
+      {
+	NONE,
+	LEFT_TOP_RIGHT_CORNER,
+	LEFT_CENTER_POINT,
+	LEFT_POINT,
+	RIGHT_TOP_LEFT_CORNER,
+	RIGHT_CENTER_POINT,
+	RIGHT_POINT,	
+      };
 
+	
       bool initialized_;
   };
 };  

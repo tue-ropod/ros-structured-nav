@@ -116,7 +116,7 @@ double MapGridCostFunction::scoreTrajectory(Trajectory &traj) {
   
     // Do not allow trajectories that go outside a tube around the global path
     if(!is_local_goal_function_ && path_distance_max_> 0.001 && grid_dist > (path_distance_max_/costmap_->getResolution()) ){       
-       ROS_WARN("path_distance_max_: %f, grid_dist: %f",path_distance_max_, grid_dist*costmap_->getResolution());
+       // ROS_WARN("path_distance_max_: %f, grid_dist: %f",path_distance_max_, grid_dist*costmap_->getResolution());
       return -4.0;
     }
     

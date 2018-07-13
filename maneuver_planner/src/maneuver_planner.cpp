@@ -91,22 +91,22 @@ void ManeuverPlanner::initialize(std::string name, costmap_2d::Costmap2DROS* cos
             if( footprint[i_fp].x > 0 && footprint[i_fp].y > 0)
             {
                 topLeftCorner_b = true;
-                topLeftCorner_ << footprint[i_fp].x << footprint[i_fp].y << 0.0 << arma::endr;
+                topLeftCorner_ << footprint[i_fp].x, footprint[i_fp].y;
             } 
             else if( footprint[i_fp].x > 0 && footprint[i_fp].y < 0)
             {
                 topRightCorner_b = true;
-                topRightCorner_ << footprint[i_fp].x << footprint[i_fp].y << 0.0 << arma::endr;
+                topRightCorner_ << footprint[i_fp].x, footprint[i_fp].y;
             } 
             else if( footprint[i_fp].x < 0 && footprint[i_fp].y < 0)
             {
                 bottomRightCorner_b = true;
-                bottomRightCorner_ << footprint[i_fp].x << footprint[i_fp].y << 0.0 << arma::endr;
+                bottomRightCorner_ << footprint[i_fp].x, footprint[i_fp].y;
             } 
             else if( footprint[i_fp].x < 0 && footprint[i_fp].y > 0)
             {
                 bottomLeftCorner_b = true;
-                bottomLeftCorner_ << footprint[i_fp].x << footprint[i_fp].y << 0.0 << arma::endr;
+                bottomLeftCorner_ << footprint[i_fp].x, footprint[i_fp].y;
             }
         }
 
@@ -117,20 +117,10 @@ void ManeuverPlanner::initialize(std::string name, costmap_2d::Costmap2DROS* cos
         }
         else
         {
-            jacobian_topRightCorner_  << 1.0 << -topRightCorner_[1] << arma::endr
-                                      << 0.0 <<  topRightCorner_[0] << arma::endr;
-
-            jacobian_topLeftCorner_   << 1.0 <<  -topLeftCorner_[1] << arma::endr
-                                      << 0.0 <<   topLeftCorner_[0] << arma::endr;
-
-            jacobian_bottomLeftCorner_<< 1.0 <<  -bottomLeftCorner_[1] << arma::endr
-                                      << 0.0 <<   bottomLeftCorner_[0] << arma::endr;
-
-            jacobian_bottomRightCorner_<< 1.0 <<  -bottomRightCorner_[1] << arma::endr
-                                       << 0.0 <<   bottomRightCorner_[0] << arma::endr;
+	    right_side_ref_point_ << 0.1, bottomRightCorner_[1];
+	    left_side_ref_point_  << 0.1, bottomLeftCorner_[1] ;
         }
-        left_side_ref_point_ << 0.1 << bottomLeftCorner_[1] << 0.0 << arma::endr; // 0.1 above center of rotation worked well in simulations. This point will be fixed
-        right_side_ref_point_ << 0.1 << bottomRightCorner_[1] << 0.0 << arma::endr; // 0.1 above center of rotation worked well in simulations. This point will be fixed
+        
 
 
 
@@ -154,13 +144,7 @@ void ManeuverPlanner::rotate2D(const tf::Stamped<tf::Pose> &pose_tf_in, const do
 
     return;
 
-//     arma::mat vec_out;
-//     arma::mat rotM;
-//     rotM  << cos(theta) <<  -sin(theta)  << arma::endr
-// 	  << sin(theta) <<   cos(theta)  << arma::endr;
-//     vec_out = rotM*vec_in.in_range( arma::span(0, 1) );
-//     vec_out[3] = vec_in[3] + theta;
-//     return  vec_out;
+
 }
 
 void ManeuverPlanner::translate2D(const tf::Stamped<tf::Pose>& pose_tf_in, const tf::Vector3& vector3_translation, tf::Stamped<tf::Pose> &pose_tf_out)
@@ -174,10 +158,6 @@ void ManeuverPlanner::translate2D(const tf::Stamped<tf::Pose>& pose_tf_in, const
     pose_tf_out.setData(tf::Transform(quat,origin));
     pose_tf_out.stamp_ = pose_tf_in.stamp_;
 
-//     arma::mat vec_out;
-//     vec_out = vec_in.in_range( arma::span(0, 1) ) + vec_tr.in_range( arma::span(0, 1) );
-//     vec_out[3] = vec_in[3];
-//     return  vec_out;
 }
 
 
@@ -439,6 +419,8 @@ bool ManeuverPlanner::makePlan(const geometry_msgs::PoseStamped& start,
 
     double footprint_cost;
     int counter = 1;
+    Eigen::Matrix2d jacobian_motrefPoint;
+    Eigen::Matrix2d invjacobian_motrefPoint;
 
     if(curve_type != ManeuverPlanner::NONE)
     {
@@ -458,7 +440,7 @@ bool ManeuverPlanner::makePlan(const geometry_msgs::PoseStamped& start,
         temp_vector3 = -refpoint_tf_robot_coord.getOrigin();
         center_traj_point_tf_refstart_coord.setData(tf::Transform(temp_quat,temp_vector3));
         // This pose as a vector because it will be more direct to make operations on it. x y theta
-        center_pose_loctrajframe_ << temp_vector3.getX() << temp_vector3.getY() << 0.0 << arma::endr;
+        center_pose_loctrajframe_ << temp_vector3.getX(), temp_vector3.getY(), 0.0;
 
 
         // Compute global coordinates center trajectory point
@@ -470,8 +452,7 @@ bool ManeuverPlanner::makePlan(const geometry_msgs::PoseStamped& start,
         translate2D(center_traj_point_tf,start_tf.getOrigin(),center_traj_point_tf);
 
         // Compute trajectory as points. Only the center of teh robot has a pose and orientation
-        motion_refpoint_localtraj_ << 0.0 << arma::endr
-                                   << 0.0 << arma::endr ; // starts at origin by definition
+        motion_refpoint_localtraj_ << 0.0, 0.0; // starts at origin by definition
         prev_motion_refpoint_localtraj_ = motion_refpoint_localtraj_;
 
         double theta_refp_goal; // Final angle of curvature
@@ -479,19 +460,18 @@ bool ManeuverPlanner::makePlan(const geometry_msgs::PoseStamped& start,
         double theta_refp_traj = 0.0 ; // This is only to control evolution of the curvature.
         double theta_refp_traj_gridsz = step_size_/signed_turning_radius_refp; // Gridsize of the trajectory angle
         double dist_bef_steer = 0.0, dist_af_steer = 0.0;
-        // Jacobian to compute virtual velocities and therefore positions.
-        jacobian_motrefPoint_ << 1.0 << -refpoint_tf_robot_coord.getOrigin().getY() << arma::endr
-                              << 0.0 <<  refpoint_tf_robot_coord.getOrigin().getX() << arma::endr;
-        arma::mat invjacobian_motrefPoint;
+        // Jacobian to compute virtual velocities and therefore positions.	
+	jacobian_motrefPoint  << 1.0 , -refpoint_tf_robot_coord.getOrigin().getY(),
+                                 0.0 ,  refpoint_tf_robot_coord.getOrigin().getX();	             
 
         if ( refpoint_tf_robot_coord.getOrigin().getX() != 0.0 )
         {   // Check refpoint is not at the center
-            invjacobian_motrefPoint = arma::inv(jacobian_motrefPoint_);
+	    invjacobian_motrefPoint = jacobian_motrefPoint.inverse();	                
         }
         else
         {
-            invjacobian_motrefPoint << 0.0 << 0.0 << arma::endr
-                                    << 0.0 << 0.0 << arma::endr;
+            invjacobian_motrefPoint << 0.0, 0.0,
+                                       0.0, 0.0;
         }
 
 
@@ -561,23 +541,28 @@ bool ManeuverPlanner::makePlan(const geometry_msgs::PoseStamped& start,
 
             // Now compute robot center of rotation trajectory
             // Compute virtual velocity of reference point. Virtual time of 1.0 sec
-            motion_refpoint_virvel_loctrajframe_ = (motion_refpoint_localtraj_ - prev_motion_refpoint_localtraj_)/1.0;
+            Eigen::Vector2d motion_refpoint_virvel_loctrajframe;
+            motion_refpoint_virvel_loctrajframe = (motion_refpoint_localtraj_ - prev_motion_refpoint_localtraj_)/1.0;
             prev_motion_refpoint_localtraj_ = motion_refpoint_localtraj_;
 
             if ( refpoint_tf_robot_coord.getOrigin().getX() != 0.0 )
             {   // Check refpoint is not at the center
                 //Compute center of rotation pose from inverse Jacobian
-                arma::mat RotM;
-                RotM    <<  std::cos(center_pose_loctrajframe_[2]) <<  std::sin(center_pose_loctrajframe_[2]) << arma::endr
-                        << -std::sin(center_pose_loctrajframe_[2]) <<  std::cos(center_pose_loctrajframe_[2]) << arma::endr;
+                Eigen::Matrix2d RotM;
+                RotM    << std::cos(center_pose_loctrajframe_[2]),  std::sin(center_pose_loctrajframe_[2]),
+                          -std::sin(center_pose_loctrajframe_[2]),  std::cos(center_pose_loctrajframe_[2]);
                 // Compute refpoint velocity local at the robot by rotating velocity vector
-                motion_refpoint_virvel_robotframe_ = RotM*motion_refpoint_virvel_loctrajframe_;
+		Eigen::Vector2d motion_refpoint_virvel_robotframe;
+                motion_refpoint_virvel_robotframe = RotM*motion_refpoint_virvel_loctrajframe;
                 // Compute the corresponding robot velocity using inverse of the jacobian
-                center_vel_robotframe_ = invjacobian_motrefPoint*motion_refpoint_virvel_robotframe_; // [dx dtheta]
+		Eigen::Vector2d center_vel_robotframe;		
+		motion_refpoint_virvel_robotframe[0]=motion_refpoint_virvel_robotframe[0];
+		motion_refpoint_virvel_robotframe[1]=motion_refpoint_virvel_robotframe[1];
+                center_vel_robotframe = invjacobian_motrefPoint*motion_refpoint_virvel_robotframe; // [dx dtheta]
                 // Compute evolution of the robot by integrating virtual velocity (dt virtual is 1.0 sec)
-                center_pose_loctrajframe_[2] += 1.0*center_vel_robotframe_[1];
-                center_pose_loctrajframe_[0] += 1.0*center_vel_robotframe_[0]*std::cos(center_pose_loctrajframe_[2]);
-                center_pose_loctrajframe_[1] += 1.0*center_vel_robotframe_[0]*std::sin(center_pose_loctrajframe_[2]);
+                center_pose_loctrajframe_[2] += 1.0*center_vel_robotframe[1];
+                center_pose_loctrajframe_[0] += 1.0*center_vel_robotframe[0]*std::cos(center_pose_loctrajframe_[2]);
+                center_pose_loctrajframe_[1] += 1.0*center_vel_robotframe[0]*std::sin(center_pose_loctrajframe_[2]);
             }
             else
             {

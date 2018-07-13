@@ -50,8 +50,8 @@
 #include <base_local_planner/world_model.h>
 #include <base_local_planner/costmap_model.h>
 
-#include <armadillo>
 #include <math.h>
+#include <Eigen/Dense>
 
 namespace maneuver_planner{
   /**
@@ -95,26 +95,19 @@ namespace maneuver_planner{
       base_local_planner::WorldModel* world_model_; ///< @brief The world model that the controller will use
       
       // Rectangular robot points
-      arma::mat topRightCorner_;
-      arma::mat topLeftCorner_;
-      arma::mat bottomRightCorner_;
-      arma::mat bottomLeftCorner_;
-      arma::mat right_side_ref_point_;
-      arma::mat left_side_ref_point_;
-      arma::mat motion_refpoint_virvel_loctrajframe_;
-      arma::mat motion_refpoint_virvel_robotframe_;
-      arma::mat prev_motion_refpoint_localtraj_;
-      arma::mat motion_refpoint_localtraj_;
-      arma::mat center_pose_loctrajframe_;
-      arma::mat center_vel_robotframe_;
-     // arma::mat prev_center_refpoint_localtraj_;
-      arma::mat jacobian_topRightCorner_;
-      arma::mat jacobian_topLeftCorner_;
-      arma::mat jacobian_bottomRightCorner_;
-      arma::mat jacobian_bottomLeftCorner_;      
-      arma::mat jacobian_motrefPoint_;
-      
-      geometry_msgs::PoseStamped top_right_corner_;
+      Eigen::Vector2d topRightCorner_;
+      Eigen::Vector2d topLeftCorner_;
+      Eigen::Vector2d bottomRightCorner_;
+      Eigen::Vector2d bottomLeftCorner_;
+      // Extra reference points
+      Eigen::Vector2d left_side_ref_point_;
+      Eigen::Vector2d right_side_ref_point_;
+      // AUxiliary variables
+      Eigen::Vector2d motion_refpoint_localtraj_;
+      Eigen::Vector2d prev_motion_refpoint_localtraj_;
+       
+      Eigen::Vector3d center_pose_loctrajframe_;
+            
       
       // Maneuver parameters
       double turning_radius_;

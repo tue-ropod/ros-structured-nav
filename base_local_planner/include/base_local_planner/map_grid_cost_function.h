@@ -89,6 +89,7 @@ public:
 
   void setXShift(double xshift) {xshift_ = xshift;}
   void setYShift(double yshift) {yshift_ = yshift;}
+  void setPathDistanceMax(double path_distance_max) {path_distance_max_ = path_distance_max;}
 
   /** @brief If true, failures along the path cause the entire path to be rejected.
    *

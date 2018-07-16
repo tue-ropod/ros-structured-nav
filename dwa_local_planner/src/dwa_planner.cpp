@@ -67,7 +67,8 @@ namespace dwa_local_planner {
     path_costs_.setScale(resolution * pdist_scale_ * 0.5);
     alignment_costs_.setScale(resolution * pdist_scale_ * 0.5);
     
-    path_distance_max_= config.path_distance_max;
+    path_distance_max_= config.path_distance_max;    
+    path_costs_.setPathDistanceMax(path_distance_max_);
 
     gdist_scale_ = config.goal_distance_bias;
     goal_costs_.setScale(resolution * gdist_scale_ * 0.5);
@@ -120,7 +121,7 @@ namespace dwa_local_planner {
   DWAPlanner::DWAPlanner(std::string name, base_local_planner::LocalPlannerUtil *planner_util) :
       planner_util_(planner_util),
       obstacle_costs_(planner_util->getCostmap()),
-      path_costs_(planner_util->getCostmap(), 0.0, 0.0, false,  base_local_planner::Max, 0.1 ),
+      path_costs_(planner_util->getCostmap(), 0.0, 0.0, false,  base_local_planner::Max, path_distance_max_ ),
       goal_costs_(planner_util->getCostmap(), 0.0, 0.0, true),
       goal_front_costs_(planner_util->getCostmap(), 0.0, 0.0, true),
       alignment_costs_(planner_util->getCostmap())      

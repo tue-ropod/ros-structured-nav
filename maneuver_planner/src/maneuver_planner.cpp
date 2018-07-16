@@ -324,7 +324,7 @@ bool ManeuverPlanner::makePlan(const geometry_msgs::PoseStamped& start,
     // Compute parameters for left or right turn using center of rotation
     double dist_before_steering_center, dist_after_steering_center, signed_turning_radius_center;
     int curve_type = computeCurveParameters(goal_tf_start_coord, turning_radius_, dist_before_steering_center, dist_after_steering_center, signed_turning_radius_center);
-//     ROS_INFO("Curve parameters: %.3f / %.3f / %.3f",dist_before_steering, dist_after_steering, signed_turning_radius);
+    //  ROS_INFO("Curve parameters: %.3f / %.3f / %.3f",dist_before_steering, dist_after_steering, signed_turning_radius);
 
     tf::Stamped<tf::Pose> refpoint_goal_tf; // Goal Refpoint in the global coordinate frame
     tf::Stamped<tf::Pose> refpoint_start_tf; // Start Refpoint in the global coordinate frame

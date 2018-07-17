@@ -104,6 +104,7 @@ namespace base_local_planner {
        * @param simple_attractor Set this to true to allow simple attraction to a goal point instead of intelligent cost propagation
        * @param y_vels A vector of the y velocities the controller will explore
        * @param angular_sim_granularity The distance between simulation points for angular velocity should be small enough that the robot doesn't hit things
+       * @param path_distance_max Maximum allowable distance from global path
        */
       TrajectoryPlanner(WorldModel& world_model, 
           const costmap_2d::Costmap2D& costmap, 
@@ -123,7 +124,7 @@ namespace base_local_planner {
           bool simple_attractor = false,
           std::vector<double> y_vels = std::vector<double>(0),
           double stop_time_buffer = 0.2,
-          double sim_period = 0.1, double angular_sim_granularity = 0.025);
+          double sim_period = 0.1, double angular_sim_granularity = 0.025, double path_distance_max = 0.0);
 
       /**
        * @brief  Destructs a trajectory controller
@@ -289,6 +290,7 @@ namespace base_local_planner {
       int vx_samples_; ///< @brief The number of samples we'll take in the x dimenstion of the control space
       int vtheta_samples_; ///< @brief The number of samples we'll take in the theta dimension of the control space
 
+      double path_distance_max_; ///< @brief Maximum allowable distance from global path
       double pdist_scale_, gdist_scale_, occdist_scale_; ///< @brief Scaling factors for the controller's cost function
       double acc_lim_x_, acc_lim_y_, acc_lim_theta_; ///< @brief The acceleration limits of the robot
 

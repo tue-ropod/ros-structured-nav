@@ -80,6 +80,7 @@ namespace base_local_planner{
       pdist_scale_ = config.pdist_scale;
       gdist_scale_ = config.gdist_scale;
       occdist_scale_ = config.occdist_scale;
+      path_distance_max_ = config.path_distance_max;
 
       if (meter_scoring_) {
         //if we use meter scoring, then we want to multiply the biases by the resolution of the costmap
@@ -87,6 +88,7 @@ namespace base_local_planner{
         gdist_scale_ *= resolution;
         pdist_scale_ *= resolution;
         occdist_scale_ *= resolution;
+        path_distance_max_ /= resolution;
       }
 
       oscillation_reset_dist_ = config.oscillation_reset_dist;
@@ -152,7 +154,7 @@ namespace base_local_planner{
       double max_vel_th, double min_vel_th, double min_in_place_vel_th,
       double backup_vel,
       bool dwa, bool heading_scoring, double heading_scoring_timestep, bool meter_scoring, bool simple_attractor,
-      vector<double> y_vels, double stop_time_buffer, double sim_period, double angular_sim_granularity)
+      vector<double> y_vels, double stop_time_buffer, double sim_period, double angular_sim_granularity, double path_distance_max)
     : path_map_(costmap.getSizeInCellsX(), costmap.getSizeInCellsY()),
       goal_map_(costmap.getSizeInCellsX(), costmap.getSizeInCellsY()),
       costmap_(costmap),
@@ -168,7 +170,7 @@ namespace base_local_planner{
     max_vel_th_(max_vel_th), min_vel_th_(min_vel_th), min_in_place_vel_th_(min_in_place_vel_th),
     backup_vel_(backup_vel),
     dwa_(dwa), heading_scoring_(heading_scoring), heading_scoring_timestep_(heading_scoring_timestep),
-    simple_attractor_(simple_attractor), y_vels_(y_vels), stop_time_buffer_(stop_time_buffer), sim_period_(sim_period)
+    simple_attractor_(simple_attractor), y_vels_(y_vels), stop_time_buffer_(stop_time_buffer), sim_period_(sim_period), path_distance_max_(path_distance_max)
   {
     //the robot is not stuck to begin with
     stuck_left = false;
@@ -335,6 +337,11 @@ namespace base_local_planner{
 //            ROS_DEBUG("No path to goal with goal distance = %f, path_distance = %f and max cost = %f",
 //                goal_dist, path_dist, impossible_cost);
             traj.cost_ = -2.0;
+            return;
+          }
+          if(path_distance_max_ > 0.0 && !rotating_left && !rotating_right && path_dist > path_distance_max_){
+//           if(path_distance_max_ > 0.0 && path_dist > path_distance_max_){
+            traj.cost_ = -3.0;
             return;
           }
         }
@@ -643,58 +650,64 @@ namespace base_local_planner{
         }
       }
     } // end if not escaping
-
-    //next we want to generate trajectories for rotating in place
+        
+    // Cesar Lopez: return and do not try any thing new.
+    // return *best_traj;
+    
+    //next we want to generate trajectories for rotating in place:
+    // Cesar Lopez: only if we have not found a good trajectory
     vtheta_samp = min_vel_theta;
     vx_samp = 0.0;
     vy_samp = 0.0;
 
     //let's try to rotate toward open space
     double heading_dist = DBL_MAX;
+    
+//     if(best_traj->cost_ < 0){
+        for(int i = 0; i < vtheta_samples_; ++i) {
+        //enforce a minimum rotational velocity because the base can't handle small in-place rotations
+        double vtheta_samp_limited = vtheta_samp > 0 ? max(vtheta_samp, min_in_place_vel_th_)
+            : min(vtheta_samp, -1.0 * min_in_place_vel_th_);
 
-    for(int i = 0; i < vtheta_samples_; ++i) {
-      //enforce a minimum rotational velocity because the base can't handle small in-place rotations
-      double vtheta_samp_limited = vtheta_samp > 0 ? max(vtheta_samp, min_in_place_vel_th_)
-        : min(vtheta_samp, -1.0 * min_in_place_vel_th_);
+        generateTrajectory(x, y, theta, vx, vy, vtheta, vx_samp, vy_samp, vtheta_samp_limited,
+            acc_x, acc_y, acc_theta, impossible_cost, *comp_traj);
 
-      generateTrajectory(x, y, theta, vx, vy, vtheta, vx_samp, vy_samp, vtheta_samp_limited,
-          acc_x, acc_y, acc_theta, impossible_cost, *comp_traj);
+        //if the new trajectory is better... let's take it...
+        //note if we can legally rotate in place we prefer to do that rather than move with y velocity
+        if(comp_traj->cost_ >= 0
+            && (comp_traj->cost_ <= best_traj->cost_ || best_traj->cost_ < 0 || best_traj->yv_ != 0.0)
+            && (vtheta_samp > dvtheta || vtheta_samp < -1 * dvtheta)){
+            double x_r, y_r, th_r;
+            comp_traj->getEndpoint(x_r, y_r, th_r);
+            x_r += heading_lookahead_ * cos(th_r);
+            y_r += heading_lookahead_ * sin(th_r);
+            unsigned int cell_x, cell_y;
 
-      //if the new trajectory is better... let's take it...
-      //note if we can legally rotate in place we prefer to do that rather than move with y velocity
-      if(comp_traj->cost_ >= 0
-          && (comp_traj->cost_ <= best_traj->cost_ || best_traj->cost_ < 0 || best_traj->yv_ != 0.0)
-          && (vtheta_samp > dvtheta || vtheta_samp < -1 * dvtheta)){
-        double x_r, y_r, th_r;
-        comp_traj->getEndpoint(x_r, y_r, th_r);
-        x_r += heading_lookahead_ * cos(th_r);
-        y_r += heading_lookahead_ * sin(th_r);
-        unsigned int cell_x, cell_y;
-
-        //make sure that we'll be looking at a legal cell
-        if (costmap_.worldToMap(x_r, y_r, cell_x, cell_y)) {
-          double ahead_gdist = goal_map_(cell_x, cell_y).target_dist;
-          if (ahead_gdist < heading_dist) {
-            //if we haven't already tried rotating left since we've moved forward
-            if (vtheta_samp < 0 && !stuck_left) {
-              swap = best_traj;
-              best_traj = comp_traj;
-              comp_traj = swap;
-              heading_dist = ahead_gdist;
+            //make sure that we'll be looking at a legal cell
+            if (costmap_.worldToMap(x_r, y_r, cell_x, cell_y)) {
+            double ahead_gdist = goal_map_(cell_x, cell_y).target_dist;
+            if (ahead_gdist < heading_dist) {
+                //if we haven't already tried rotating left since we've moved forward
+                if (vtheta_samp < 0 && !stuck_left) {
+                swap = best_traj;
+                best_traj = comp_traj;
+                comp_traj = swap;
+                heading_dist = ahead_gdist;
+                }
+                //if we haven't already tried rotating right since we've moved forward
+                else if(vtheta_samp > 0 && !stuck_right) {
+                swap = best_traj;
+                best_traj = comp_traj;
+                comp_traj = swap;
+                heading_dist = ahead_gdist;
+                }
             }
-            //if we haven't already tried rotating right since we've moved forward
-            else if(vtheta_samp > 0 && !stuck_right) {
-              swap = best_traj;
-              best_traj = comp_traj;
-              comp_traj = swap;
-              heading_dist = ahead_gdist;
             }
-          }
         }
-      }
 
-      vtheta_samp += dvtheta;
-    }
+        vtheta_samp += dvtheta;
+        }
+//     }
 
     //do we have a legal trajectory
     if (best_traj->cost_ >= 0) {

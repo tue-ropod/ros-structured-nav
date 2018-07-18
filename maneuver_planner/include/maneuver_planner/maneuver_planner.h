@@ -86,7 +86,7 @@ namespace maneuver_planner{
        * @return True if a valid plan was found, false otherwise
        */
       bool makePlan(const geometry_msgs::PoseStamped& start, 
-          const geometry_msgs::PoseStamped& goal, std::vector<geometry_msgs::PoseStamped>& plan);
+          const geometry_msgs::PoseStamped& goal, std::vector<geometry_msgs::PoseStamped>& plan);      
 
     private:
       costmap_2d::Costmap2DROS* costmap_ros_;
@@ -118,6 +118,16 @@ namespace maneuver_planner{
       geometry_msgs::PoseStamped start_;
       bool valid_last_goal_;
       
+      // LinearSearch
+      double lin_search_absmax_; // Absolute maximum while searching for turning radius
+      double lin_search_max_;    // Maximum while searching for turning radius
+      double lin_search_min_;    // Minimum while searching for turning radius
+      double lin_search_curr_;    // Current value
+      int lin_search_max_steps_;     // Maximum number of steps
+      double lin_search_step_size_min_; // Minimum step size
+      double lin_search_step_size_;     // step size
+      int lin_search_sign_;
+      int lin_search_cnt_;
 
       /**
        * @brief  Checks the legality of the robot footprint at a position and orientation using the world model
@@ -129,20 +139,40 @@ namespace maneuver_planner{
       double footprintCost(double x_i, double y_i, double theta_i);
       
       void rotate2D(const tf::Stamped<tf::Pose> &pose_tf_in, const double theta, tf::Stamped<tf::Pose> &pose_tf_out);
-      void translate2D(const tf::Stamped<tf::Pose> &pose_tf_in, const tf::Vector3 &vector3_translation, tf::Stamped<tf::Pose> &pose_tf_out);
-      int  computeCurveParameters(const tf::Stamped<tf::Pose>& pose_target, const double& turning_radius, double &dist_before_steering, double &dist_after_steering, double &signed_turning_radius);
-      enum ManeuverType
+      void translate2D(const tf::Stamped<tf::Pose> &pose_tf_in, const tf::Vector3 &vector3_translation, tf::Stamped<tf::Pose> &pose_tf_out);      
+      bool computeCurveParameters(const tf::Stamped<tf::Pose>& pose_target, const double& signed_turning_radius, const double& x_intersection, double &dist_before_steering, double &dist_after_steering);
+      int  determineManeuverType(const tf::Stamped<tf::Pose>& pose_target,  double &signed_max_turning_radius, double& x_intersection);
+      bool generateTrajectory(const tf::Stamped<tf::Pose>& start_tf, tf::Stamped<tf::Pose> refpoint_goal_tf_refstart_coord,
+                               const tf::Stamped<tf::Pose>& goal_tf, const tf::Stamped<tf::Pose>& refpoint_tf_robot_coord, 
+                               const double& dist_before_steering_refp, const double& dist_after_steering_refp, 
+                               const double& signed_turning_radius_refp, std::vector<geometry_msgs::PoseStamped>& plan);
+      bool linePlanner(const geometry_msgs::PoseStamped& start,
+                               const geometry_msgs::PoseStamped& goal, std::vector<geometry_msgs::PoseStamped>& plan);
+      
+      void resetLinearSearch(double lin_search_min, double lin_search_max, double lin_search_step_size_min, int lin_search_max_steps);
+      bool linearSearch(double &lin_search_curr);
+      
+      enum curveType
       {
-	NONE,
-	LEFT_TOP_RIGHT_CORNER,
-	LEFT_CENTER_POINT,
-	LEFT_POINT,
-	RIGHT_TOP_LEFT_CORNER,
-	RIGHT_CENTER_POINT,
-	RIGHT_POINT,	
+	CURVE_NONE,
+	CURVE_LEFT_TOP_RIGHT_CORNER,
+	CURVE_LEFT_CENTER_POINT,
+	CURVE_LEFT_POINT,
+	CURVE_RIGHT_TOP_LEFT_CORNER,
+	CURVE_RIGHT_CENTER_POINT,
+	CURVE_RIGHT_POINT,	
       };
 
-	
+      enum maneuverType
+      {
+        MANEUVER_NONE,
+        MANEUVER_LEFT,
+        MANEUVER_RIGHT,
+        MANEUVER_LEFT_RIGHT,
+        MANEUVER_RIGHT_LEFT,
+      };	
+      
+      
       bool initialized_;
   };
 };  

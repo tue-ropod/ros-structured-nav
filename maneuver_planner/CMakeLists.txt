@@ -28,7 +28,7 @@ catkin_package(
         nav_core
 )
 
-add_library(maneuver_planner src/maneuver_planner.cpp)
+add_library(maneuver_planner src/maneuver_planner.cpp src/parameter_generator.cpp)
 add_dependencies(maneuver_planner ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 target_link_libraries(maneuver_planner
     ${catkin_LIBRARIES}

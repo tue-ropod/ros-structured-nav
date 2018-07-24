@@ -136,13 +136,20 @@ namespace maneuver_planner{
       void rotate2D(const tf::Stamped<tf::Pose> &pose_tf_in, const double theta, tf::Stamped<tf::Pose> &pose_tf_out);
       void translate2D(const tf::Stamped<tf::Pose> &pose_tf_in, const tf::Vector3 &vector3_translation, tf::Stamped<tf::Pose> &pose_tf_out);      
       bool computeSingleManeuverParameters(const tf::Stamped<tf::Pose>& pose_target, const double& signed_turning_radius, const double& x_intersection, double &dist_before_steering, double &dist_after_steering);
-      int  determineManeuverType(const tf::Stamped<tf::Pose>& pose_target,  double &signed_max_turning_radius, double& x_intersection);
-      bool generateTrajectorySingleManeuver(const tf::Stamped<tf::Pose>& start_tf, tf::Stamped<tf::Pose> refpoint_goal_tf_refstart_coord,
-                               const tf::Stamped<tf::Pose>& goal_tf, const tf::Stamped<tf::Pose>& refpoint_tf_robot_coord, 
-                               const double& dist_before_steering_refp, const double& dist_after_steering_refp, 
-                               const double& signed_turning_radius_refp, std::vector<geometry_msgs::PoseStamped>& plan);
+      int  determineManeuverType(const tf::Stamped<tf::Pose>& pose_target,  double &signed_max_turning_radius, double& x_intersection);      
+      
+      bool searchTrajectoryLeftRightManeuver(const tf::Stamped<tf::Pose>& start_tf, const tf::Stamped<tf::Pose>& goal_tf, 
+                                             const tf::Stamped<tf::Pose>& refpoint_tf_robot_coord, std::vector<geometry_msgs::PoseStamped>& plan);
+      bool searchTrajectoryRightLeftManeuver(const tf::Stamped<tf::Pose>& start_tf, const tf::Stamped<tf::Pose>& goal_tf, 
+                                             const tf::Stamped<tf::Pose>& refpoint_tf_robot_coord, std::vector<geometry_msgs::PoseStamped>& plan);
+      
       bool searchTrajectorySingleManeuver(const tf::Stamped<tf::Pose>& start_tf, const tf::Stamped<tf::Pose>& goal_tf, 
                                           const tf::Stamped<tf::Pose>& refpoint_tf_robot_coord, std::vector<geometry_msgs::PoseStamped>& plan);
+      bool checkFootprintOnTrajectory(const tf::Stamped<tf::Pose>& start_tf, 
+                                const tf::Stamped<tf::Pose>& goal_tf, const tf::Stamped<tf::Pose>& refpoint_tf_robot_coord, 
+                                const std::vector<tf::Pose> &local_plan_refp, std::vector<geometry_msgs::PoseStamped>& plan);
+      void generateDublinTrajectory(const double& dist_before_steering_refp, const double& dist_after_steering_refp, 
+                               const double& signed_turning_radius_refp, const double& theta_refp_goal, std::vector<tf::Pose> &local_plan_refp);
       bool linePlanner(const geometry_msgs::PoseStamped& start,
                                const geometry_msgs::PoseStamped& goal, std::vector<geometry_msgs::PoseStamped>& plan);
       

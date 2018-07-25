@@ -140,11 +140,9 @@ namespace maneuver_planner{
       
       bool searchTrajectoryLeftRightManeuver(const tf::Stamped<tf::Pose>& start_tf, const tf::Stamped<tf::Pose>& goal_tf, 
                                              const tf::Stamped<tf::Pose>& refpoint_tf_robot_coord, std::vector<geometry_msgs::PoseStamped>& plan);
-      bool searchTrajectoryRightLeftManeuver(const tf::Stamped<tf::Pose>& start_tf, const tf::Stamped<tf::Pose>& goal_tf, 
-                                             const tf::Stamped<tf::Pose>& refpoint_tf_robot_coord, std::vector<geometry_msgs::PoseStamped>& plan);
       
       bool searchTrajectorySingleManeuver(const tf::Stamped<tf::Pose>& start_tf, const tf::Stamped<tf::Pose>& goal_tf, 
-                                          const tf::Stamped<tf::Pose>& refpoint_tf_robot_coord, std::vector<geometry_msgs::PoseStamped>& plan);
+                                           std::vector< tf::Stamped<tf::Pose> >& refpoint_tf_robot_coord_vec, std::vector<geometry_msgs::PoseStamped>& plan);
       bool checkFootprintOnTrajectory(const tf::Stamped<tf::Pose>& start_tf, 
                                 const tf::Stamped<tf::Pose>& goal_tf, const tf::Stamped<tf::Pose>& refpoint_tf_robot_coord, 
                                 const std::vector<tf::Pose> &local_plan_refp, std::vector<geometry_msgs::PoseStamped>& plan);

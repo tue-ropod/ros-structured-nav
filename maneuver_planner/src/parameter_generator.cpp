@@ -67,7 +67,8 @@ ParameterGenerator::ParameterGenerator(double lin_search_min, double lin_search_
 
 void ParameterGenerator::resetLinearSearch(double lin_search_min, double lin_search_max)
 {
-      lin_search_max_ = std::min(lin_search_absmax_,lin_search_max);
+      lin_search_max_ = std::min(lin_search_absmax_,lin_search_max); 
+      lin_search_max_ = std::max(lin_search_max_,lin_search_min); 
       lin_search_min_ = lin_search_min;
       lin_search_step_size_ = std::max( lin_search_step_size_min_,  std::abs( (lin_search_max_-lin_search_min_)/lin_search_max_steps_ ) );
       lin_search_curr_ = (lin_search_max_+lin_search_min_)/2.0;

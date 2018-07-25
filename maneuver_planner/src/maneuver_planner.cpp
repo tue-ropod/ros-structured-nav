@@ -196,11 +196,10 @@ int  ManeuverPlanner::determineManeuverType(const tf::Stamped<tf::Pose>& pose_ta
             { 
                 ROS_INFO(" Target in front left of the robot: Execute left and then turn right");
                 maneuver_type = ManeuverPlanner::MANEUVER_LEFT_RIGHT;
-                //maneuver_type = ManeuverPlanner::MANEUVER_NONE;
             }
             else // This could be executed with a left maneuver > M_PI turn, or multiple maneuvers. For now use carrot planner
             {
-                ROS_INFO(" Target in front left of the robot: Uncoventional orientation. Execute carrot planner");
+                ROS_INFO(" Target in front left of the robot: Unconventional orientation. Execute carrot planner");
                 maneuver_type = ManeuverPlanner::MANEUVER_NONE;
             }
         }
@@ -215,12 +214,11 @@ int  ManeuverPlanner::determineManeuverType(const tf::Stamped<tf::Pose>& pose_ta
             else if( yaw_target > theta_target && yaw_target < M_PI/2.0 ) // Execute right and then turn left
             {
                 ROS_INFO(" Target in front right of the robot:  Execute right and then turn left");
-                // maneuver_type = ManeuverPlanner::MANEUVER_RIGHT_LEFT;
-                maneuver_type = ManeuverPlanner::MANEUVER_NONE;
+                maneuver_type = ManeuverPlanner::MANEUVER_RIGHT_LEFT;
             }
             else // This could be executed with a right maneuver > M_PI turn, or multiple maneuvers. For now use carrot planner
             {
-                ROS_INFO(" Target in front left of the robot: Uncoventional orientation. Execute carrot planner");
+                ROS_INFO(" Target in front left of the robot: Unconventional orientation. Execute carrot planner");
                 maneuver_type = ManeuverPlanner::MANEUVER_NONE;
             }            
         }
@@ -505,6 +503,7 @@ bool ManeuverPlanner::searchTrajectoryLeftRightManeuver(const tf::Stamped<tf::Po
     tf::Stamped<tf::Pose> refpoint_goal_tf; // Goal Refpoint in the global coordinate frame        
     tf::Stamped<tf::Pose> refpoint_goal_tf_refstart_coord; // Goal Refpoint in the the start position of the reference point coordinate frame
     double dist_before_steering_refp, dist_after_steering_refp, signed_turning_radius_refp;
+    double unsigned_radius;
     double dist_before_steering_center, dist_after_steering_center, signed_turning_radius_center;
     int curve_type;  
     bool maneuver_traj_succesful = false;
@@ -545,31 +544,40 @@ bool ManeuverPlanner::searchTrajectoryLeftRightManeuver(const tf::Stamped<tf::Po
     temp_vector3 = tf::Vector3(refpoint_goal_tf_refstart_coord.getOrigin().getX()/2.0, refpoint_goal_tf_refstart_coord.getOrigin().getY()/2.0, 0.0);    
     refpoint_midway_goal_tf_refstart_coord.setOrigin(temp_vector3);
     double refp_theta_min = std::atan2(refpoint_midway_goal_tf_refstart_coord.getOrigin().getY(), refpoint_midway_goal_tf_refstart_coord.getOrigin().getX());
-    double refp_theta_max = M_PI;
-    double theta_refp_goal = angles::normalize_angle(refp_theta_min + 0.5*(refp_theta_max-refp_theta_min)  ); // Final angle of mid goal // For now set a fix value. We can do also a search on this parameter_generator 
+    double refp_theta_max;
+    if( refp_theta_min > 0)        
+    {   // Left right
+        refp_theta_max = M_PI/2.0;
+    }
+    else
+    {
+        // Right left
+        refp_theta_max = -M_PI/2.0;
+    }
+    
+    double theta_refp_goal = angles::normalize_angle(refp_theta_min + 0.8*(refp_theta_max-refp_theta_min)  ); // Final angle of mid goal // For now set a fix value. We can do also a search on this parameter_generator 
     temp_quat.setRPY(0.0, 0.0, theta_refp_goal); 
     refpoint_midway_goal_tf_refstart_coord.setRotation(temp_quat);
     
-    double min_radius;     
+    double min_radius = radius_search_.lin_search_min_;     
     double signed_max_turning_radius_refp;    // Maximum steering radius using the eference point
     double xlocal_intersection_refp;          // Intersection of target in local x coodinates using the reference point    
     int maneuver_type_refp;
     std::vector<tf::Pose> local_plan_refp;
-    
     
     ROS_INFO("First maneuver reached");
     // First maneuver    
     maneuver_type_refp = determineManeuverType(refpoint_midway_goal_tf_refstart_coord,  signed_max_turning_radius_refp, xlocal_intersection_refp);            
     if (maneuver_type_refp == ManeuverPlanner::MANEUVER_LEFT || maneuver_type_refp == ManeuverPlanner::MANEUVER_RIGHT)
     {   // This only supports single maneuvers    
-            
-        if(signed_max_turning_radius_refp > 0.0)
-            min_radius = std::abs(radius_search_.lin_search_min_);
-        else
-            min_radius = - std::abs(radius_search_.lin_search_min_);   
-        
-        radius_search_.resetLinearSearch(min_radius, signed_max_turning_radius_refp);
-        while( radius_search_.linearSearch(signed_turning_radius_refp) & !maneuver_traj_succesful){            
+       
+        radius_search_.resetLinearSearch(min_radius, std::abs(signed_max_turning_radius_refp));
+        while( radius_search_.linearSearch(unsigned_radius) & !maneuver_traj_succesful){           
+            if(signed_max_turning_radius_refp > 0.0)
+                signed_turning_radius_refp = unsigned_radius;
+            else
+                signed_turning_radius_refp = -unsigned_radius;
+                                
             ROS_INFO(" signed_turning_radius_first_maneuver: %.3f", signed_turning_radius_refp);
             curve_type = computeSingleManeuverParameters(refpoint_midway_goal_tf_refstart_coord, signed_turning_radius_refp,  xlocal_intersection_refp, dist_before_steering_refp, dist_after_steering_refp);
             // ROS_INFO("Curve parameters: %.3f / %.3f / %.3f",dist_before_steering_refp, dist_after_steering_refp, signed_turning_radius_refp);             
@@ -578,7 +586,12 @@ bool ManeuverPlanner::searchTrajectoryLeftRightManeuver(const tf::Stamped<tf::Po
                 generateDublinTrajectory(dist_before_steering_refp, dist_after_steering_refp, signed_turning_radius_refp, theta_refp_goal, local_plan_refp);                
             }
         }                                
-    }    
+    }   
+    else
+    {
+        ROS_INFO("Invalid maneuver");
+        return false;
+    }
     
     ROS_INFO("First local trajectory created. Second maneuver reached");   
     std::vector<tf::Pose> local_plan_refp_second_m;
@@ -591,13 +604,13 @@ bool ManeuverPlanner::searchTrajectoryLeftRightManeuver(const tf::Stamped<tf::Po
     if (maneuver_type_refp == ManeuverPlanner::MANEUVER_LEFT || maneuver_type_refp == ManeuverPlanner::MANEUVER_RIGHT)
     {   // This only supports single maneuvers    
             
-        if(signed_max_turning_radius_refp > 0.0)
-            min_radius = std::abs(radius_search_.lin_search_min_);
-        else
-            min_radius = - std::abs(radius_search_.lin_search_min_);   
         
-        radius_search_.resetLinearSearch(min_radius, signed_max_turning_radius_refp);
-        while( radius_search_.linearSearch(signed_turning_radius_refp) & !maneuver_traj_succesful){            
+        radius_search_.resetLinearSearch(min_radius, std::abs(signed_max_turning_radius_refp));
+        while( radius_search_.linearSearch(unsigned_radius) & !maneuver_traj_succesful){      
+            if(signed_max_turning_radius_refp > 0.0)
+                signed_turning_radius_refp = unsigned_radius;
+            else
+                signed_turning_radius_refp = -unsigned_radius;
             ROS_INFO(" signed_turning_radius_second_maneuver: %.3f", signed_turning_radius_refp);
             curve_type = computeSingleManeuverParameters(refpoint_goal_tf_refstart_coord, signed_turning_radius_refp,  xlocal_intersection_refp, dist_before_steering_refp, dist_after_steering_refp);
             // ROS_INFO("Curve parameters: %.3f / %.3f / %.3f",dist_before_steering_refp, dist_after_steering_refp, signed_turning_radius_refp);             
@@ -606,7 +619,12 @@ bool ManeuverPlanner::searchTrajectoryLeftRightManeuver(const tf::Stamped<tf::Po
                 generateDublinTrajectory(dist_before_steering_refp, dist_after_steering_refp, signed_turning_radius_refp, theta_refp_goal, local_plan_refp_second_m);                
             }
         }                                
-    }    
+    }
+    else
+    {
+        ROS_INFO("Invalid maneuver");
+        return false;
+    }
     
     ROS_INFO("Second local trajectory created");
     
@@ -627,157 +645,20 @@ bool ManeuverPlanner::searchTrajectoryLeftRightManeuver(const tf::Stamped<tf::Po
         local_plan_refp.push_back(pose_local_plan);
     }
  
-  ROS_INFO("Total trajectory created. Check trajectory");
+  
   maneuver_traj_succesful = checkFootprintOnTrajectory(start_tf, goal_tf, refpoint_tf_robot_coord, local_plan_refp, plan); // here goal_tf is only 
+  ROS_INFO("Total trajectory created. Check trajectory, free: %d", (int) maneuver_traj_succesful);
   return maneuver_traj_succesful;
 
 }
 
-bool ManeuverPlanner::searchTrajectoryRightLeftManeuver(const tf::Stamped<tf::Pose>& start_tf, const tf::Stamped<tf::Pose>& goal_tf, 
-                                                        const tf::Stamped<tf::Pose>& refpoint_tf_robot_coord, std::vector<geometry_msgs::PoseStamped>& plan)
-{
-    tf::Stamped<tf::Pose> midway_goal_tf;
-    midway_goal_tf.frame_id_    = goal_tf.frame_id_;
-    midway_goal_tf.stamp_       = goal_tf.stamp_;
-            
-    
-    tf::Stamped<tf::Pose> refpoint_start_tf; // Start Refpoint in the global coordinate frame
-    tf::Stamped<tf::Pose> refpoint_goal_tf; // Goal Refpoint in the global coordinate frame        
-    tf::Stamped<tf::Pose> refpoint_goal_tf_refstart_coord; // Goal Refpoint in the the start position of the reference point coordinate frame
-    double dist_before_steering_refp, dist_after_steering_refp, signed_turning_radius_refp;
-    double dist_before_steering_center, dist_after_steering_center, signed_turning_radius_center;
-    int curve_type;  
-    bool maneuver_traj_succesful = false;
-    double start_yaw, goal_yaw, temp_yaw, temp_pitch, temp_roll;
-    tf::Quaternion temp_quat;
-    tf::Vector3 temp_vector3;
-    start_tf.getBasis().getEulerYPR(start_yaw, temp_pitch, temp_roll);             
-    goal_tf.getBasis().getEulerYPR(goal_yaw, temp_pitch, temp_roll);             
-    
-    tf::Stamped<tf::Pose> goal_tf_start_coord; // Goal in the start vector coordinates
-    goal_tf_start_coord.frame_id_ = "/center_rotation_start_pos";
-
-    translate2D(goal_tf,-start_tf.getOrigin(),goal_tf_start_coord);
-    rotate2D(goal_tf_start_coord,-start_yaw,goal_tf_start_coord);
-    
-    
-    // Compute reference start and goal on global coordinates
-    refpoint_start_tf.frame_id_ = goal_tf.frame_id_;
-    refpoint_start_tf.stamp_ = goal_tf.stamp_;
-    rotate2D(refpoint_tf_robot_coord,start_yaw,refpoint_start_tf);
-    translate2D(refpoint_start_tf,start_tf.getOrigin(),refpoint_start_tf);
-
-    refpoint_goal_tf.frame_id_ = goal_tf.frame_id_;
-    refpoint_goal_tf.stamp_ = goal_tf.stamp_;
-    rotate2D(refpoint_tf_robot_coord,goal_yaw,refpoint_goal_tf);
-    translate2D(refpoint_goal_tf,goal_tf.getOrigin(),refpoint_goal_tf);
-
-    // Then Compute reference start and goal on reference start coordinates
-    refpoint_goal_tf_refstart_coord.frame_id_ = "/refpoint_start_pos";
-    refpoint_goal_tf_refstart_coord.stamp_ = goal_tf.stamp_;
-
-    translate2D(refpoint_goal_tf,-refpoint_start_tf.getOrigin(),refpoint_goal_tf_refstart_coord);
-    refpoint_start_tf.getBasis().getEulerYPR(temp_yaw, temp_pitch, temp_roll);
-    rotate2D(refpoint_goal_tf_refstart_coord,-temp_yaw,refpoint_goal_tf_refstart_coord);    
-    
-    tf::Stamped<tf::Pose> refpoint_midway_goal_tf_refstart_coord; // Midway Goal Refpoint in the the start position of the reference point coordinate frame
-    // the minimiun angle for theta midway is the angle of the 
-    temp_vector3 = tf::Vector3(refpoint_goal_tf_refstart_coord.getOrigin().getX()/2.0, refpoint_goal_tf_refstart_coord.getOrigin().getY()/2.0, 0.0);    
-    refpoint_midway_goal_tf_refstart_coord.setOrigin(temp_vector3);
-    double refp_theta_min = std::atan2(refpoint_midway_goal_tf_refstart_coord.getOrigin().getY(), refpoint_midway_goal_tf_refstart_coord.getOrigin().getX());
-    double refp_theta_max = -M_PI;
-    double theta_refp_goal = angles::normalize_angle(refp_theta_min + 0.5*(refp_theta_max-refp_theta_min)  ); // Final angle of mid goal // For now set a fix value. We can do also a search on this parameter_generator 
-    temp_quat.setRPY(0.0, 0.0, theta_refp_goal); 
-    refpoint_midway_goal_tf_refstart_coord.setRotation(temp_quat);
-    
-    double min_radius;     
-    double signed_max_turning_radius_refp;    // Maximum steering radius using the eference point
-    double xlocal_intersection_refp;          // Intersection of target in local x coodinates using the reference point    
-    int maneuver_type_refp;
-    std::vector<tf::Pose> local_plan_refp;
-    
-    
-    ROS_INFO("First maneuver reached");
-    // First maneuver    
-    maneuver_type_refp = determineManeuverType(refpoint_midway_goal_tf_refstart_coord,  signed_max_turning_radius_refp, xlocal_intersection_refp);            
-    if (maneuver_type_refp == ManeuverPlanner::MANEUVER_LEFT || maneuver_type_refp == ManeuverPlanner::MANEUVER_RIGHT)
-    {   // This only supports single maneuvers    
-            
-        if(signed_max_turning_radius_refp > 0.0)
-            min_radius = std::abs(radius_search_.lin_search_min_);
-        else
-            min_radius = - std::abs(radius_search_.lin_search_min_);   
-        
-        radius_search_.resetLinearSearch(min_radius, signed_max_turning_radius_refp);
-        while( radius_search_.linearSearch(signed_turning_radius_refp) & !maneuver_traj_succesful){            
-            ROS_INFO(" signed_turning_radius_first_maneuver: %.3f", signed_turning_radius_refp);
-            curve_type = computeSingleManeuverParameters(refpoint_midway_goal_tf_refstart_coord, signed_turning_radius_refp,  xlocal_intersection_refp, dist_before_steering_refp, dist_after_steering_refp);
-            // ROS_INFO("Curve parameters: %.3f / %.3f / %.3f",dist_before_steering_refp, dist_after_steering_refp, signed_turning_radius_refp);             
-            if( curve_type!= ManeuverPlanner::CURVE_NONE ) // curve possible, generate
-            {
-                generateDublinTrajectory(dist_before_steering_refp, dist_after_steering_refp, signed_turning_radius_refp, theta_refp_goal, local_plan_refp);                
-            }
-        }                                
-    }    
-    
-    ROS_INFO("First local trajectory created. Second maneuver reached");   
-    std::vector<tf::Pose> local_plan_refp_second_m;
-    
-    translate2D(refpoint_goal_tf_refstart_coord,-refpoint_midway_goal_tf_refstart_coord.getOrigin(),refpoint_goal_tf_refstart_coord);
-    refpoint_midway_goal_tf_refstart_coord.getBasis().getEulerYPR(temp_yaw, temp_pitch, temp_roll);
-    rotate2D(refpoint_goal_tf_refstart_coord,-temp_yaw,refpoint_goal_tf_refstart_coord); 
-    
-    maneuver_type_refp = determineManeuverType(refpoint_goal_tf_refstart_coord,  signed_max_turning_radius_refp, xlocal_intersection_refp);            
-    if (maneuver_type_refp == ManeuverPlanner::MANEUVER_LEFT || maneuver_type_refp == ManeuverPlanner::MANEUVER_RIGHT)
-    {   // This only supports single maneuvers    
-            
-        if(signed_max_turning_radius_refp > 0.0)
-            min_radius = std::abs(radius_search_.lin_search_min_);
-        else
-            min_radius = - std::abs(radius_search_.lin_search_min_);   
-        
-        radius_search_.resetLinearSearch(min_radius, signed_max_turning_radius_refp);
-        while( radius_search_.linearSearch(signed_turning_radius_refp) & !maneuver_traj_succesful){            
-            ROS_INFO(" signed_turning_radius_second_maneuver: %.3f", signed_turning_radius_refp);
-            curve_type = computeSingleManeuverParameters(refpoint_goal_tf_refstart_coord, signed_turning_radius_refp,  xlocal_intersection_refp, dist_before_steering_refp, dist_after_steering_refp);
-            // ROS_INFO("Curve parameters: %.3f / %.3f / %.3f",dist_before_steering_refp, dist_after_steering_refp, signed_turning_radius_refp);             
-            if( curve_type!= ManeuverPlanner::CURVE_NONE ) // curve possible, generate
-            {
-                generateDublinTrajectory(dist_before_steering_refp, dist_after_steering_refp, signed_turning_radius_refp, theta_refp_goal, local_plan_refp_second_m);                
-            }
-        }                                
-    }    
-    
-    ROS_INFO("Second local trajectory created");
-    
-    std::vector<tf::Pose>::iterator plan_iterator;
-    tf::Pose pose_local_plan;
-    tf::Stamped<tf::Pose> point_local_plan_refp_second_m_stamped;
-    
-    for (plan_iterator = local_plan_refp_second_m.begin(); plan_iterator != local_plan_refp_second_m.end(); plan_iterator++)
-    {
-        point_local_plan_refp_second_m_stamped.setData(*plan_iterator);        
-        
-        // transform back from the middle way point 
-        refpoint_midway_goal_tf_refstart_coord.getBasis().getEulerYPR(temp_yaw, temp_pitch, temp_roll);
-        rotate2D(point_local_plan_refp_second_m_stamped,+temp_yaw,point_local_plan_refp_second_m_stamped); 
-        translate2D(point_local_plan_refp_second_m_stamped, refpoint_midway_goal_tf_refstart_coord.getOrigin(), point_local_plan_refp_second_m_stamped);                 
-        pose_local_plan.setOrigin(point_local_plan_refp_second_m_stamped.getOrigin());
-        pose_local_plan.setRotation(point_local_plan_refp_second_m_stamped.getRotation());
-        local_plan_refp.push_back(pose_local_plan);
-    }
- 
-  ROS_INFO("Total trajectory created. Check trajectory");
-  maneuver_traj_succesful = checkFootprintOnTrajectory(start_tf, goal_tf, refpoint_tf_robot_coord, local_plan_refp, plan); // here goal_tf is only 
-  return maneuver_traj_succesful;
-
-}
 
 
 bool ManeuverPlanner::searchTrajectorySingleManeuver(const tf::Stamped<tf::Pose>& start_tf, 
-                               const tf::Stamped<tf::Pose>& goal_tf, const tf::Stamped<tf::Pose>& refpoint_tf_robot_coord, 
+                               const tf::Stamped<tf::Pose>& goal_tf, std::vector< tf::Stamped<tf::Pose> >& refpoint_tf_robot_coord_vec, 
                                std::vector<geometry_msgs::PoseStamped>& plan)
 {
+    tf::Stamped<tf::Pose> refpoint_tf_robot_coord;
     tf::Stamped<tf::Pose> refpoint_start_tf; // Start Refpoint in the global coordinate frame
     tf::Stamped<tf::Pose> refpoint_goal_tf; // Goal Refpoint in the global coordinate frame        
     tf::Stamped<tf::Pose> refpoint_goal_tf_refstart_coord; // Goal Refpoint in the the start position of the reference point coordinate frame
@@ -798,94 +679,73 @@ bool ManeuverPlanner::searchTrajectorySingleManeuver(const tf::Stamped<tf::Pose>
     rotate2D(goal_tf_start_coord,-start_yaw,goal_tf_start_coord);
     
     
-    // Compute reference start and goal on global coordinates
-    refpoint_start_tf.frame_id_ = goal_tf.frame_id_;
-    refpoint_start_tf.stamp_ = goal_tf.stamp_;
-    rotate2D(refpoint_tf_robot_coord,start_yaw,refpoint_start_tf);
-    translate2D(refpoint_start_tf,start_tf.getOrigin(),refpoint_start_tf);
-
-    refpoint_goal_tf.frame_id_ = goal_tf.frame_id_;
-    refpoint_goal_tf.stamp_ = goal_tf.stamp_;
-    rotate2D(refpoint_tf_robot_coord,goal_yaw,refpoint_goal_tf);
-    translate2D(refpoint_goal_tf,goal_tf.getOrigin(),refpoint_goal_tf);
-
-    // Then Compute reference start and goal on reference start coordinates
-    refpoint_goal_tf_refstart_coord.frame_id_ = "/refpoint_start_pos";
-    refpoint_goal_tf_refstart_coord.stamp_ = goal_tf.stamp_;
-
-    translate2D(refpoint_goal_tf,-refpoint_start_tf.getOrigin(),refpoint_goal_tf_refstart_coord);
-    refpoint_start_tf.getBasis().getEulerYPR(temp_yaw, temp_pitch, temp_roll);
-    rotate2D(refpoint_goal_tf_refstart_coord,-temp_yaw,refpoint_goal_tf_refstart_coord);
-        
-    double min_radius;     
-    double signed_max_turning_radius_refp;    // Maximum steering radius using the eference point
-    double xlocal_intersection_refp;          // Intersection of target in local x coodinates using the reference point
-    int maneuver_type_refp = determineManeuverType(refpoint_goal_tf_refstart_coord,  signed_max_turning_radius_refp, xlocal_intersection_refp);
-    double signed_max_turning_radius_center;    // Maximum steering radius using the center of the robot
-    double xlocal_intersection_center;          // Intersection of target in local x coodinates
-    int maneuver_type_center;
-    std::vector<tf::Pose> local_plan_refp;
-    
-    double theta_refp_goal = angles::normalize_angle( goal_yaw - start_yaw ); // Final angle of curvature    
-  
-    
-            
-    if (maneuver_type_refp == ManeuverPlanner::MANEUVER_LEFT || maneuver_type_refp == ManeuverPlanner::MANEUVER_RIGHT)
-    {   // This only supports single maneuvers    
-            
-        if(signed_max_turning_radius_refp > 0.0)
-            min_radius = std::abs(radius_search_.lin_search_min_);
-        else
-            min_radius = - std::abs(radius_search_.lin_search_min_);   
-        
-        radius_search_.resetLinearSearch(min_radius, signed_max_turning_radius_refp);
-        while( radius_search_.linearSearch(signed_turning_radius_refp) & !maneuver_traj_succesful){            
-            ROS_INFO(" signed_turning_radius_refp: %.3f", signed_turning_radius_refp);
-            curve_type = computeSingleManeuverParameters(refpoint_goal_tf_refstart_coord, signed_turning_radius_refp,  xlocal_intersection_refp, dist_before_steering_refp, dist_after_steering_refp);
-            // ROS_INFO("Curve parameters: %.3f / %.3f / %.3f",dist_before_steering_refp, dist_after_steering_refp, signed_turning_radius_refp);             
-            plan.clear();
-            if( curve_type!= ManeuverPlanner::CURVE_NONE ) // curve possible, generate
-            {
-                generateDublinTrajectory(dist_before_steering_refp, dist_after_steering_refp, signed_turning_radius_refp, theta_refp_goal, local_plan_refp);
-                maneuver_traj_succesful = checkFootprintOnTrajectory(start_tf, goal_tf, refpoint_tf_robot_coord, local_plan_refp, plan);
-            }
-         }                        
-        
-    }
-    
-    
-    if( maneuver_traj_succesful == false ) 
+    std::vector< tf::Stamped<tf::Pose> >::iterator refpoint_tf_robot_coord_it;
+     
+    for ( refpoint_tf_robot_coord_it = refpoint_tf_robot_coord_vec.begin(); refpoint_tf_robot_coord_it!=refpoint_tf_robot_coord_vec.end(); refpoint_tf_robot_coord_it++)
     {
-        // Come back to reference point at the center
-        ROS_INFO("Setting reference point back to center of rotation");
-        tf::Stamped<tf::Pose> center_tf_robot_coord;
-        center_tf_robot_coord.frame_id_ = "/wholerobot_link";
-        center_tf_robot_coord.stamp_ = goal_tf.stamp_;
-        temp_quat.setRPY(0.0,0.0,0.0);
-        temp_vector3 = tf::Vector3(0.0,0.0, 0.0);
-        center_tf_robot_coord.setData(tf::Transform(temp_quat,temp_vector3));
-        
-        maneuver_type_center = determineManeuverType(goal_tf_start_coord,  signed_max_turning_radius_center, xlocal_intersection_center);
-        
-        if (maneuver_type_center == ManeuverPlanner::MANEUVER_LEFT || maneuver_type_center == ManeuverPlanner::MANEUVER_RIGHT)
-        {
-            if(signed_max_turning_radius_center > 0.0)
-                min_radius = std::abs(radius_search_.lin_search_min_);
-            else
-                min_radius = - std::abs(radius_search_.lin_search_min_);     
-            
-            radius_search_.resetLinearSearch(min_radius, signed_max_turning_radius_center);
-            while( radius_search_.linearSearch(signed_turning_radius_center) & !maneuver_traj_succesful){
-                ROS_INFO(" signed_turning_radius_center: %.3f", signed_turning_radius_center);
-                computeSingleManeuverParameters(goal_tf_start_coord, signed_turning_radius_center,  xlocal_intersection_center, dist_before_steering_center, dist_after_steering_center);
-                plan.clear();
-                generateDublinTrajectory(dist_before_steering_center, dist_after_steering_center, signed_turning_radius_center, theta_refp_goal, local_plan_refp);
-                maneuver_traj_succesful = checkFootprintOnTrajectory(start_tf, goal_tf, center_tf_robot_coord, local_plan_refp, plan);
-                
-            }
-        }
-    }
+        refpoint_tf_robot_coord = *refpoint_tf_robot_coord_it;
+   
     
+        // Compute reference start and goal on global coordinates
+        refpoint_start_tf.frame_id_ = goal_tf.frame_id_;
+        refpoint_start_tf.stamp_ = goal_tf.stamp_;
+        rotate2D(refpoint_tf_robot_coord,start_yaw,refpoint_start_tf);
+        translate2D(refpoint_start_tf,start_tf.getOrigin(),refpoint_start_tf);
+
+        refpoint_goal_tf.frame_id_ = goal_tf.frame_id_;
+        refpoint_goal_tf.stamp_ = goal_tf.stamp_;
+        rotate2D(refpoint_tf_robot_coord,goal_yaw,refpoint_goal_tf);
+        translate2D(refpoint_goal_tf,goal_tf.getOrigin(),refpoint_goal_tf);
+
+        // Then Compute reference start and goal on reference start coordinates
+        refpoint_goal_tf_refstart_coord.frame_id_ = "/refpoint_start_pos";
+        refpoint_goal_tf_refstart_coord.stamp_ = goal_tf.stamp_;
+
+        translate2D(refpoint_goal_tf,-refpoint_start_tf.getOrigin(),refpoint_goal_tf_refstart_coord);
+        refpoint_start_tf.getBasis().getEulerYPR(temp_yaw, temp_pitch, temp_roll);
+        rotate2D(refpoint_goal_tf_refstart_coord,-temp_yaw,refpoint_goal_tf_refstart_coord);
+            
+        double min_radius = radius_search_.lin_search_min_;     
+        double unsigned_radius;
+        double signed_max_turning_radius_refp;    // Maximum steering radius using the eference point
+        double xlocal_intersection_refp;          // Intersection of target in local x coodinates using the reference point
+        int maneuver_type_refp = determineManeuverType(refpoint_goal_tf_refstart_coord,  signed_max_turning_radius_refp, xlocal_intersection_refp);
+        double signed_max_turning_radius_center;    // Maximum steering radius using the center of the robot
+        double xlocal_intersection_center;          // Intersection of target in local x coodinates
+        int maneuver_type_center;
+        std::vector<tf::Pose> local_plan_refp;
+
+        double theta_refp_goal = angles::normalize_angle( goal_yaw - start_yaw ); // Final angle of curvature    
+
+
+                
+        if (maneuver_type_refp == ManeuverPlanner::MANEUVER_LEFT || maneuver_type_refp == ManeuverPlanner::MANEUVER_RIGHT)
+        {   // This only supports single maneuvers    
+                
+            radius_search_.resetLinearSearch(min_radius, std::abs(signed_max_turning_radius_refp));
+            while( radius_search_.linearSearch(unsigned_radius) & !maneuver_traj_succesful){      
+                if(signed_max_turning_radius_refp > 0.0)
+                    signed_turning_radius_refp = unsigned_radius;
+                else
+                    signed_turning_radius_refp = -unsigned_radius;         
+                ROS_INFO(" signed_turning_radius_refp: %.3f", signed_turning_radius_refp);
+                curve_type = computeSingleManeuverParameters(refpoint_goal_tf_refstart_coord, signed_turning_radius_refp,  xlocal_intersection_refp, dist_before_steering_refp, dist_after_steering_refp);
+                // ROS_INFO("Curve parameters: %.3f / %.3f / %.3f",dist_before_steering_refp, dist_after_steering_refp, signed_turning_radius_refp);             
+                plan.clear();
+                if( curve_type!= ManeuverPlanner::CURVE_NONE ) // curve possible, generate
+                {
+                    generateDublinTrajectory(dist_before_steering_refp, dist_after_steering_refp, signed_turning_radius_refp, theta_refp_goal, local_plan_refp);
+                    maneuver_traj_succesful = checkFootprintOnTrajectory(start_tf, goal_tf, refpoint_tf_robot_coord, local_plan_refp, plan);
+                }
+                }                        
+            
+        }
+
+
+        if (maneuver_traj_succesful)
+            break;
+    }
+
     return maneuver_traj_succesful;
 
 }
@@ -1049,6 +909,7 @@ bool ManeuverPlanner::makePlan(const geometry_msgs::PoseStamped& start,
     */
     
     tf::Stamped<tf::Pose> refpoint_tf_robot_coord; // Refpoint in the robot(+load) coordinate frame
+    std::vector< tf::Stamped<tf::Pose> > refpoint_tf_robot_coord_vec;
     double maneuver_traj_succesful = false;
     
     
@@ -1064,10 +925,22 @@ bool ManeuverPlanner::makePlan(const geometry_msgs::PoseStamped& start,
             refpoint_tf_robot_coord.frame_id_ = "/wholerobot_link";
             refpoint_tf_robot_coord.stamp_ = goal_tf.stamp_;
             temp_quat.setRPY(0.0,0.0,0.0);
+            refpoint_tf_robot_coord_vec.clear();
+            
             temp_vector3 = tf::Vector3(topRightCorner_[0], topRightCorner_[1], 0.0);
             refpoint_tf_robot_coord.setData(tf::Transform(temp_quat,temp_vector3));
+            refpoint_tf_robot_coord_vec.push_back(refpoint_tf_robot_coord);
+            
+            temp_vector3 = tf::Vector3(0.0, 0.0, 0.0);
+            refpoint_tf_robot_coord.setData(tf::Transform(temp_quat,temp_vector3));
+            refpoint_tf_robot_coord_vec.push_back(refpoint_tf_robot_coord);
+            
+            temp_vector3 = tf::Vector3(left_side_ref_point_[0], left_side_ref_point_[1], 0.0);
+            refpoint_tf_robot_coord.setData(tf::Transform(temp_quat,temp_vector3));
+            refpoint_tf_robot_coord_vec.push_back(refpoint_tf_robot_coord);
+            
             ROS_INFO("Left turn");
-            maneuver_traj_succesful = searchTrajectorySingleManeuver(start_tf, goal_tf, refpoint_tf_robot_coord, plan);
+            maneuver_traj_succesful = searchTrajectorySingleManeuver(start_tf, goal_tf, refpoint_tf_robot_coord_vec, plan);
             break;
 
         case ManeuverPlanner::MANEUVER_RIGHT :
@@ -1078,12 +951,26 @@ bool ManeuverPlanner::makePlan(const geometry_msgs::PoseStamped& start,
             // If recomputing trajectory is not possible, the switch back
             // reference point to middle of the rotation axis.
             refpoint_tf_robot_coord.frame_id_ = "/wholerobot_link";
-            refpoint_tf_robot_coord.stamp_ = goal_tf.stamp_;
+            refpoint_tf_robot_coord.stamp_ = goal_tf.stamp_;            
             temp_quat.setRPY(0.0,0.0,0.0);
+            refpoint_tf_robot_coord_vec.clear();
+            
             temp_vector3 = tf::Vector3(right_side_ref_point_[0], right_side_ref_point_[1], 0.0);
+            refpoint_tf_robot_coord.setData(tf::Transform(temp_quat,temp_vector3));            
+            refpoint_tf_robot_coord_vec.push_back(refpoint_tf_robot_coord);
+            
+            temp_vector3 = tf::Vector3(0.0, 0.0, 0.0);
             refpoint_tf_robot_coord.setData(tf::Transform(temp_quat,temp_vector3));
+            refpoint_tf_robot_coord_vec.push_back(refpoint_tf_robot_coord);   
+            
+            temp_vector3 = tf::Vector3(topLeftCorner_[0], topLeftCorner_[1], 0.0);
+            refpoint_tf_robot_coord.setData(tf::Transform(temp_quat,temp_vector3));            
+            refpoint_tf_robot_coord_vec.push_back(refpoint_tf_robot_coord);
+            
+            
+            
             ROS_INFO("Right turn");
-            maneuver_traj_succesful = searchTrajectorySingleManeuver(start_tf, goal_tf, refpoint_tf_robot_coord, plan);
+            maneuver_traj_succesful = searchTrajectorySingleManeuver(start_tf, goal_tf, refpoint_tf_robot_coord_vec, plan);
             
             break;            
         case ManeuverPlanner::MANEUVER_LEFT_RIGHT :
@@ -1093,11 +980,28 @@ bool ManeuverPlanner::makePlan(const geometry_msgs::PoseStamped& start,
             refpoint_tf_robot_coord.frame_id_ = "/wholerobot_link";
             refpoint_tf_robot_coord.stamp_ = goal_tf.stamp_;
             temp_quat.setRPY(0.0,0.0,0.0);
+            
             temp_vector3 = tf::Vector3(topLeftCorner_[0], topLeftCorner_[1], 0.0);
             refpoint_tf_robot_coord.setData(tf::Transform(temp_quat,temp_vector3));
+            
             ROS_INFO("Left Right turn"); 
             maneuver_traj_succesful = searchTrajectoryLeftRightManeuver(start_tf, goal_tf, refpoint_tf_robot_coord, plan);            
             break;
+        case ManeuverPlanner::MANEUVER_RIGHT_LEFT :
+            // Initially choose top left corner (trc) as reference to generate
+            // trajectory. Suitable for when tlc is desired to keep parallel to the
+            // left wall. 
+            refpoint_tf_robot_coord.frame_id_ = "/wholerobot_link";
+            refpoint_tf_robot_coord.stamp_ = goal_tf.stamp_;
+            temp_quat.setRPY(0.0,0.0,0.0);
+
+            temp_vector3 = tf::Vector3(topRightCorner_[0], topRightCorner_[1], 0.0);
+            refpoint_tf_robot_coord.setData(tf::Transform(temp_quat,temp_vector3));
+
+            
+            ROS_INFO("Right Left turn"); 
+            maneuver_traj_succesful = searchTrajectoryLeftRightManeuver(start_tf, goal_tf, refpoint_tf_robot_coord, plan);            
+            break;            
         default:
             break;
         }

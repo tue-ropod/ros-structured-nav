@@ -120,8 +120,9 @@ namespace maneuver_planner{
       geometry_msgs::PoseStamped start_;
       bool valid_last_goal_;
       
-      // LinearSearch
+      // ParameterSearch
       parameter_generator::ParameterGenerator radius_search_;
+      parameter_generator::ParameterGenerator midway_scale_lr_search_;     
       
       
       /**

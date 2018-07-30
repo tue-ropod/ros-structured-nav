@@ -67,13 +67,13 @@ namespace parameter_generator{
       bool linearSearch(double &lin_search_curr);
       
       double lin_search_min_;    // Minimum while searching for turning radius
+      double lin_search_max_;    // Maximum while searching for turning radius
 
     private:
 
       
       // LinearSearch
-      double lin_search_absmax_; // Absolute maximum while searching for turning radius
-      double lin_search_max_;    // Maximum while searching for turning radius
+      double lin_search_absmax_; // Absolute maximum while searching for turning radius      
       double lin_search_curr_;    // Current value
       int lin_search_max_steps_;     // Maximum number of steps
       double lin_search_step_size_min_; // Minimum step size

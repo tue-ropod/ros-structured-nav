@@ -588,7 +588,7 @@ namespace base_local_planner{
     double impossible_cost = path_map_.obstacleCosts();
 
     //if we're performing an escape we won't allow moving forward
-    if (!escaping_) {
+    if (true) {//(!escaping_) {
       //loop through all x velocities
       for(int i = 0; i < vx_samples_; ++i) {
         vtheta_samp = 0;
@@ -663,7 +663,7 @@ namespace base_local_planner{
     //let's try to rotate toward open space
     double heading_dist = DBL_MAX;
     
-//     if(best_traj->cost_ < 0){
+     if(best_traj->cost_ < 0){
         for(int i = 0; i < vtheta_samples_; ++i) {
         //enforce a minimum rotational velocity because the base can't handle small in-place rotations
         double vtheta_samp_limited = vtheta_samp > 0 ? max(vtheta_samp, min_in_place_vel_th_)
@@ -707,7 +707,7 @@ namespace base_local_planner{
 
         vtheta_samp += dvtheta;
         }
-//     }
+     }
 
     //do we have a legal trajectory
     if (best_traj->cost_ >= 0) {

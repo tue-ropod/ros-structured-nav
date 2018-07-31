@@ -123,6 +123,7 @@ namespace maneuver_planner{
       // ParameterSearch
       parameter_generator::ParameterGenerator radius_search_;
       parameter_generator::ParameterGenerator midway_scale_lr_search_;     
+      parameter_generator::ParameterGenerator midway_side_ovt_search_;  // search distance on the side when overtaking
       
       
       /**
@@ -139,6 +140,11 @@ namespace maneuver_planner{
       bool computeSingleManeuverParameters(const tf::Stamped<tf::Pose>& pose_target, const double& signed_turning_radius, const double& x_intersection, double &dist_before_steering, double &dist_after_steering);
       int  determineManeuverType(const tf::Stamped<tf::Pose>& pose_target,  double &signed_max_turning_radius, double& x_intersection);      
       
+      bool searchTrajectoryCompoundLeftRightManeuver(const tf::Stamped<tf::Pose>& start_tf, const tf::Stamped<tf::Pose>& goal_tf, 
+                                             const tf::Stamped<tf::Pose>& refpoint_tf_robot_coord, std::vector<geometry_msgs::PoseStamped>& plan);
+      
+      bool searchTrajectoryOvertakeManeuver(const tf::Stamped<tf::Pose>& start_tf, const tf::Stamped<tf::Pose>& goal_tf, 
+                                                        const tf::Stamped<tf::Pose>& refpoint_tf_robot_coord, std::vector<geometry_msgs::PoseStamped>& plan, double & dist_without_obstacles);
       bool searchTrajectoryLeftRightManeuver(const tf::Stamped<tf::Pose>& start_tf, const tf::Stamped<tf::Pose>& goal_tf, 
                                              const tf::Stamped<tf::Pose>& refpoint_tf_robot_coord, std::vector<geometry_msgs::PoseStamped>& plan);
       
@@ -150,7 +156,7 @@ namespace maneuver_planner{
       void generateDublinTrajectory(const double& dist_before_steering_refp, const double& dist_after_steering_refp, 
                                const double& signed_turning_radius_refp, const double& theta_refp_goal, std::vector<tf::Pose> &local_plan_refp);
       bool linePlanner(const geometry_msgs::PoseStamped& start,
-                               const geometry_msgs::PoseStamped& goal, std::vector<geometry_msgs::PoseStamped>& plan);
+                               const geometry_msgs::PoseStamped& goal, std::vector<geometry_msgs::PoseStamped>& plan, double &dist_without_obstacles);
       
       
       enum curveType
@@ -171,7 +177,11 @@ namespace maneuver_planner{
         MANEUVER_RIGHT,
         MANEUVER_LEFT_RIGHT,
         MANEUVER_RIGHT_LEFT,
+        MANEUVER_STRAIGHT_OTHERWISE_OVERTAKE,
       };	
+      
+      static const double MIN_X_DIST_OVERTAKE = 2.0;
+      static const double MIN_THETA_OVERTAKE = 10.0/180.0*M_PI;
       
       
       bool initialized_;

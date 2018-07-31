@@ -65,7 +65,7 @@ ParameterGenerator::ParameterGenerator(double lin_search_min, double lin_search_
 
 
 
-void ParameterGenerator::resetLinearSearch(double lin_search_min, double lin_search_max)
+void ParameterGenerator::resetMidSearch(double lin_search_min, double lin_search_max)
 {
       lin_search_max_ = std::min(lin_search_absmax_,lin_search_max); 
       lin_search_max_ = std::max(lin_search_max_,lin_search_min); 
@@ -76,7 +76,7 @@ void ParameterGenerator::resetLinearSearch(double lin_search_min, double lin_sea
       lin_search_cnt_ = 0;
 }
 
-bool ParameterGenerator::linearSearch(double &lin_search_curr)
+bool ParameterGenerator::midSearch(double &lin_search_curr)
 {    
     double span         = std::abs(lin_search_max_-lin_search_min_);    
     double current_span    = 2.0*lin_search_cnt_*lin_search_step_size_;
@@ -96,6 +96,35 @@ bool ParameterGenerator::linearSearch(double &lin_search_curr)
     }
 }
 
+
+void ParameterGenerator::resetLinearSearch(double lin_search_min, double lin_search_max)
+{
+      lin_search_max_ = std::min(lin_search_absmax_,lin_search_max); 
+      lin_search_max_ = std::max(lin_search_max_,lin_search_min); 
+      lin_search_min_ = lin_search_min;
+      lin_search_step_size_ = std::max( lin_search_step_size_min_,  std::abs( (lin_search_max_-lin_search_min_)/lin_search_max_steps_ ) );
+      lin_search_curr_ = lin_search_min_;
+      lin_search_sign_ = 1;
+      lin_search_cnt_ = 0;
+}
+
+bool ParameterGenerator::linearSearch(double &lin_search_curr)
+{    
+    double span         = std::abs(lin_search_max_-lin_search_min_);    
+    double current_span    = lin_search_cnt_*lin_search_step_size_;
+    if( current_span > span )
+    {
+        lin_search_curr = lin_search_curr_;
+        return false;
+    }
+    else
+    {
+        lin_search_curr_ = lin_search_min_+ lin_search_cnt_*lin_search_step_size_;
+        lin_search_cnt_++;
+        lin_search_curr = lin_search_curr_;
+        return true;
+    }
+}
 
 
 };

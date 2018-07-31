@@ -62,9 +62,11 @@ namespace parameter_generator{
        * @param lin_search_max
        * @return 
        */
-      void resetLinearSearch(double lin_search_min, double lin_search_max);
-      
+      void resetLinearSearch(double lin_search_min, double lin_search_max);      
       bool linearSearch(double &lin_search_curr);
+      
+      void resetMidSearch(double lin_search_min, double lin_search_max);      
+      bool midSearch(double &lin_search_curr);      
       
       double lin_search_min_;    // Minimum while searching for turning radius
       double lin_search_max_;    // Maximum while searching for turning radius

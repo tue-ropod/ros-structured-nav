@@ -320,11 +320,11 @@ namespace base_local_planner{
         // with heading scoring, we take into account heading diff, and also only score
         // path and goal distance for one point of the trajectory
         if (heading_scoring_) {
-          if (time >= heading_scoring_timestep_ && time < heading_scoring_timestep_ + dt) {
+//           if (time >= heading_scoring_timestep_ && time < heading_scoring_timestep_ + dt) {
             heading_diff = headingDiff(cell_x, cell_y, x_i, y_i, theta_i);
-          } else {
-            update_path_and_goal_distances = false;
-          }
+//           } else {
+//             update_path_and_goal_distances = false;
+//           }
         }
 
         if (update_path_and_goal_distances) {
@@ -341,8 +341,9 @@ namespace base_local_planner{
           }
           if(path_distance_max_ > 0.0 && !rotating_left && !rotating_right && path_dist > path_distance_max_){
 //           if(path_distance_max_ > 0.0 && path_dist > path_distance_max_){
-            traj.cost_ = -3.0;
-            return;
+              path_dist*=10.0;
+            // traj.cost_ = -3.0;
+            // return;
           }
         }
       }
@@ -369,27 +370,72 @@ namespace base_local_planner{
     double cost = -1.0;
     if (!heading_scoring_) {
       cost = pdist_scale_ * path_dist + goal_dist * gdist_scale_ + occdist_scale_ * occ_cost;
-    } else {
-      cost = occdist_scale_ * occ_cost + pdist_scale_ * path_dist + 0.3 * heading_diff + goal_dist * gdist_scale_;
+    } else {        
+      cost = occdist_scale_ * occ_cost + pdist_scale_ * path_dist + 0.3 * heading_diff + goal_dist * gdist_scale_;      
     }
     traj.cost_ = cost;
   }
 
+// //   double TrajectoryPlanner::headingDiff(int cell_x, int cell_y, double x, double y, double heading){
+// //     unsigned int goal_cell_x, goal_cell_y;
+// // 
+// //     // find a clear line of sight from the robot's cell to a farthest point on the path
+// //     for (int i = global_plan_.size() - 1; i >=0; --i) {
+// //       if (costmap_.worldToMap(global_plan_[i].pose.position.x, global_plan_[i].pose.position.y, goal_cell_x, goal_cell_y)) {
+// //         if (lineCost(cell_x, goal_cell_x, cell_y, goal_cell_y) >= 0) {
+// //           double gx, gy;
+// //           costmap_.mapToWorld(goal_cell_x, goal_cell_y, gx, gy);
+// //           return fabs(angles::shortest_angular_distance(heading, atan2(gy - y, gx - x)));
+// //         }
+// //       }
+// //     }
+// //     return DBL_MAX;
+// //   }
+  
   double TrajectoryPlanner::headingDiff(int cell_x, int cell_y, double x, double y, double heading){
     unsigned int goal_cell_x, goal_cell_y;
 
-    // find a clear line of sight from the robot's cell to a farthest point on the path
+    // find closest current position to global plan and take the heading from there
+    double dist_to_path_min = 1e3;
+    double dist_to_path; 
+    tf::Pose pose_temp;
+    tf::Quaternion quat_temp;
+    int look_ahead_samples  = 3;
+    int index_plan;
+    double yaw, pitch, roll;
     for (int i = global_plan_.size() - 1; i >=0; --i) {
-      if (costmap_.worldToMap(global_plan_[i].pose.position.x, global_plan_[i].pose.position.y, goal_cell_x, goal_cell_y)) {
-        if (lineCost(cell_x, goal_cell_x, cell_y, goal_cell_y) >= 0) {
-          double gx, gy;
-          costmap_.mapToWorld(goal_cell_x, goal_cell_y, gx, gy);
-          return fabs(angles::shortest_angular_distance(heading, atan2(gy - y, gx - x)));
-        }
-      }
-    }
-    return DBL_MAX;
-  }
+        dist_to_path = hypot(global_plan_[i].pose.position.x-x,global_plan_[i].pose.position.y-y);
+        if(dist_to_path < dist_to_path_min){
+            dist_to_path_min = dist_to_path;
+        }else{ // found minimum, take diff.
+            index_plan = std::min<int>(i + look_ahead_samples, global_plan_.size() - 1);
+            quat_temp.setW(global_plan_[index_plan].pose.orientation.w);    
+            quat_temp.setX(global_plan_[index_plan].pose.orientation.x);    
+            quat_temp.setY(global_plan_[index_plan].pose.orientation.y);    
+            quat_temp.setZ(global_plan_[index_plan].pose.orientation.z);    
+            pose_temp.setRotation(quat_temp);
+            pose_temp.getBasis().getEulerYPR(yaw, pitch, roll);     
+            
+            if ( index_plan > i && costmap_.worldToMap(global_plan_[index_plan].pose.position.x, global_plan_[index_plan].pose.position.y, goal_cell_x, goal_cell_y) ) {
+                double gx, gy;
+                costmap_.mapToWorld(goal_cell_x, goal_cell_y, gx, gy);
+                return fabs(angles::shortest_angular_distance(heading, atan2(gy - y, gx - x)));
+            }else{
+                return fabs(angles::shortest_angular_distance(heading, yaw) );
+            }                                    
+        }        
+    }    
+    quat_temp.setW(global_plan_[0].pose.orientation.w);    
+    quat_temp.setX(global_plan_[0].pose.orientation.x);    
+    quat_temp.setY(global_plan_[0].pose.orientation.y);    
+    quat_temp.setZ(global_plan_[0].pose.orientation.z); 
+    pose_temp.setRotation(quat_temp);
+    pose_temp.getBasis().getEulerYPR(yaw, pitch, roll);            
+    return fabs(angles::shortest_angular_distance(heading, yaw) );
+    
+  }  
+  
+
 
   //calculate the cost of a ray-traced line
   double TrajectoryPlanner::lineCost(int x0, int x1,
@@ -588,7 +634,8 @@ namespace base_local_planner{
     double impossible_cost = path_map_.obstacleCosts();
 
     //if we're performing an escape we won't allow moving forward
-    if (true) {//(!escaping_) {
+    if (true) {//{ Cesar
+//    if (!escaping_) {
       //loop through all x velocities
       for(int i = 0; i < vx_samples_; ++i) {
         vtheta_samp = 0;
@@ -663,7 +710,7 @@ namespace base_local_planner{
     //let's try to rotate toward open space
     double heading_dist = DBL_MAX;
     
-     if(best_traj->cost_ < 0){
+  //   if(best_traj->cost_ < 0){
         for(int i = 0; i < vtheta_samples_; ++i) {
         //enforce a minimum rotational velocity because the base can't handle small in-place rotations
         double vtheta_samp_limited = vtheta_samp > 0 ? max(vtheta_samp, min_in_place_vel_th_)
@@ -686,28 +733,28 @@ namespace base_local_planner{
             //make sure that we'll be looking at a legal cell
             if (costmap_.worldToMap(x_r, y_r, cell_x, cell_y)) {
             double ahead_gdist = goal_map_(cell_x, cell_y).target_dist;
-            if (ahead_gdist < heading_dist) {
+       //     if (ahead_gdist < heading_dist) {
                 //if we haven't already tried rotating left since we've moved forward
-                if (vtheta_samp < 0 && !stuck_left) {
+//                 if (vtheta_samp < 0 && !stuck_left) {
+//                 swap = best_traj;
+//                 best_traj = comp_traj;
+//                 comp_traj = swap;
+//                 heading_dist = ahead_gdist;
+//                 }
+//                 //if we haven't already tried rotating right since we've moved forward
+//                 else if(vtheta_samp > 0 && !stuck_right) {
                 swap = best_traj;
                 best_traj = comp_traj;
                 comp_traj = swap;
                 heading_dist = ahead_gdist;
-                }
-                //if we haven't already tried rotating right since we've moved forward
-                else if(vtheta_samp > 0 && !stuck_right) {
-                swap = best_traj;
-                best_traj = comp_traj;
-                comp_traj = swap;
-                heading_dist = ahead_gdist;
-                }
-            }
+//                 }
+      //      }
             }
         }
 
         vtheta_samp += dvtheta;
         }
-     }
+  //   }
 
     //do we have a legal trajectory
     if (best_traj->cost_ >= 0) {
@@ -910,6 +957,10 @@ namespace base_local_planner{
     //if the trajectory failed because the footprint hits something, we're still going to back up
     if(best_traj->cost_ == -1.0)
       best_traj->cost_ = 1.0;
+    
+   if(stuck_right || stuck_left){
+     ROS_INFO("stuck") ;
+   }
 
     return *best_traj;
 
@@ -976,7 +1027,12 @@ namespace base_local_planner{
     */
 
     if(best.cost_ < 0){
-      drive_velocities.setIdentity();
+      //drive_velocities.setIdentity();
+      tf::Vector3 start(0, 0, 0);
+      drive_velocities.setOrigin(start);
+      tf::Matrix3x3 matrix;
+      matrix.setRotation(tf::createQuaternionFromYaw(0));
+      drive_velocities.setBasis(matrix);
     }
     else{
       tf::Vector3 start(best.xv_, best.yv_, 0);

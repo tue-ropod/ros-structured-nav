@@ -721,7 +721,7 @@ bool ManeuverPlanner::searchTrajectoryOvertakeManeuver(const tf::Stamped<tf::Pos
         refpoint_midway_goal_tf_refstart_coord.setOrigin(temp_vector3);
         refpoint_midway_goal_tf_refstart_coord.setRotation(temp_quat);        
 
-        ROS_INFO("refpoint_midway_goal_loc: %f, %f, %f", refpoint_midway_goal_tf_refstart_coord.getOrigin().getX(), refpoint_midway_goal_tf_refstart_coord.getOrigin().getY(), theta_refp_goal);
+//         ROS_INFO("refpoint_midway_goal_loc: %f, %f, %f", refpoint_midway_goal_tf_refstart_coord.getOrigin().getX(), refpoint_midway_goal_tf_refstart_coord.getOrigin().getY(), theta_refp_goal);
         
         // Convert back to global coordinates
         temp_quat.setRPY(0.0, 0.0, 0.0); 
@@ -1331,6 +1331,7 @@ bool ManeuverPlanner::makePlan(const geometry_msgs::PoseStamped& start,
         }
 
     }
+   
    
     
     if( maneuver_traj_succesful == false) // Maneuver planning failed. Attemp linear planner

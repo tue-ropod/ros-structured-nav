@@ -355,7 +355,9 @@ void ManeuverPlanner::generateDublinTrajectory(const double& dist_before_steerin
     
 }
 
-bool ManeuverPlanner::checkFootprintOnTrajectory(const tf::Stamped<tf::Pose>& start_tf, 
+
+
+bool ManeuverPlanner::checkFootprintTransformLocalToGlobal(const tf::Stamped<tf::Pose>& start_tf, 
                                 const tf::Stamped<tf::Pose>& goal_tf, const tf::Stamped<tf::Pose>& refpoint_tf_robot_coord, 
                                 const std::vector<tf::Pose>& local_plan_refp, std::vector<geometry_msgs::PoseStamped>& plan)
 {
@@ -887,7 +889,7 @@ bool ManeuverPlanner::searchTrajectoryLeftRightManeuver(const tf::Stamped<tf::Po
                 {
                     generateDublinTrajectory(dist_before_steering_refp, dist_after_steering_refp, signed_turning_radius_refp, theta_refp_goal, local_plan_refp_first_m);  
                     plan.clear();
-                    maneuver_traj_succesful = checkFootprintOnTrajectory(start_tf, goal_tf, refpoint_tf_robot_coord, local_plan_refp_first_m, plan); // here goal_tf is only  
+                    maneuver_traj_succesful = checkFootprintTransformLocalToGlobal(start_tf, goal_tf, refpoint_tf_robot_coord, local_plan_refp_first_m, plan); // here goal_tf is only  
                 }                
             }                                
         } 
@@ -950,7 +952,7 @@ bool ManeuverPlanner::searchTrajectoryLeftRightManeuver(const tf::Stamped<tf::Po
                     }
                 
                     plan.clear();
-                    maneuver_traj_succesful = checkFootprintOnTrajectory(start_tf, goal_tf, refpoint_tf_robot_coord, local_plan_refp, plan); // here goal_tf is only                        
+                    maneuver_traj_succesful = checkFootprintTransformLocalToGlobal(start_tf, goal_tf, refpoint_tf_robot_coord, local_plan_refp, plan); // here goal_tf is only                        
                     
                 }
             }                                
@@ -1044,7 +1046,7 @@ bool ManeuverPlanner::searchTrajectorySingleManeuver(const tf::Stamped<tf::Pose>
                 if( curve_type!= ManeuverPlanner::CURVE_NONE ) // curve possible, generate
                 {
                     generateDublinTrajectory(dist_before_steering_refp, dist_after_steering_refp, signed_turning_radius_refp, theta_refp_goal, local_plan_refp);
-                    maneuver_traj_succesful = checkFootprintOnTrajectory(start_tf, goal_tf, refpoint_tf_robot_coord, local_plan_refp, plan);
+                    maneuver_traj_succesful = checkFootprintTransformLocalToGlobal(start_tf, goal_tf, refpoint_tf_robot_coord, local_plan_refp, plan);
                 }
             }                        
             

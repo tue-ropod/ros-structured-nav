@@ -87,8 +87,7 @@ namespace base_local_planner{
         double resolution = costmap_.getResolution();
         gdist_scale_ *= resolution;
         pdist_scale_ *= resolution;
-        occdist_scale_ *= resolution;
-        path_distance_max_ /= resolution;
+        occdist_scale_ *= resolution;       
       }
 
       oscillation_reset_dist_ = config.oscillation_reset_dist;
@@ -236,6 +235,7 @@ namespace base_local_planner{
     //compute the magnitude of the velocities
     double vmag = hypot(vx_samp, vy_samp);
 
+    traj.path_dist_traj_ = -1.0;
     //compute the number of steps we must take along this trajectory to be "safe"
     int num_steps;
     if(!heading_scoring_) {
@@ -339,11 +339,17 @@ namespace base_local_planner{
             traj.cost_ = -2.0;
             return;
           }
-          if(path_distance_max_ > 0.0 && !rotating_left && !rotating_right && path_dist > path_distance_max_){
-//           if(path_distance_max_ > 0.0 && path_dist > path_distance_max_){
-              path_dist*=10.0;
-            // traj.cost_ = -3.0;
-            // return;
+          // ROS_INFO("path_dist %f",path_dist);
+          double path_dist_internal = (double) path_dist;
+          if ( meter_scoring_ )
+              path_dist_internal *= costmap_.getResolution();
+          
+//           if(path_distance_max_ > 0.0 && !rotating_left && !rotating_right && path_dist_internal > path_distance_max_){
+          traj.path_dist_traj_ = path_dist_internal;
+          if(path_distance_max_ > 0.0 && path_dist_internal > path_distance_max_){
+//               path_dist*=10.0;              
+             traj.cost_ = -3.0;             
+             return;
           }
         }
       }
@@ -371,7 +377,7 @@ namespace base_local_planner{
     if (!heading_scoring_) {
       cost = pdist_scale_ * path_dist + goal_dist * gdist_scale_ + occdist_scale_ * occ_cost;
     } else {        
-      cost = occdist_scale_ * occ_cost + pdist_scale_ * path_dist + 0.3 * heading_diff + goal_dist * gdist_scale_;      
+      cost = occdist_scale_ * occ_cost + pdist_scale_ * path_dist + 10*0.3 * heading_diff + goal_dist * gdist_scale_;      
     }
     traj.cost_ = cost;
   }
@@ -698,7 +704,7 @@ namespace base_local_planner{
       }
     } // end if not escaping
         
-    // Cesar Lopez: return and do not try any thing new.
+    // Cesar Lopez: return and do not try anything new.
     // return *best_traj;
     
     //next we want to generate trajectories for rotating in place:
@@ -709,8 +715,8 @@ namespace base_local_planner{
 
     //let's try to rotate toward open space
     double heading_dist = DBL_MAX;
-    
-  //   if(best_traj->cost_ < 0){
+
+     if (best_traj->cost_ < 0){ //Cesar added condition
         for(int i = 0; i < vtheta_samples_; ++i) {
         //enforce a minimum rotational velocity because the base can't handle small in-place rotations
         double vtheta_samp_limited = vtheta_samp > 0 ? max(vtheta_samp, min_in_place_vel_th_)
@@ -725,16 +731,16 @@ namespace base_local_planner{
             && (comp_traj->cost_ <= best_traj->cost_ || best_traj->cost_ < 0 || best_traj->yv_ != 0.0)
             && (vtheta_samp > dvtheta || vtheta_samp < -1 * dvtheta)){
             double x_r, y_r, th_r;
-            comp_traj->getEndpoint(x_r, y_r, th_r);
+            unsigned int cell_x, cell_y;
             x_r += heading_lookahead_ * cos(th_r);
             y_r += heading_lookahead_ * sin(th_r);
-            unsigned int cell_x, cell_y;
+            
 
             //make sure that we'll be looking at a legal cell
             if (costmap_.worldToMap(x_r, y_r, cell_x, cell_y)) {
             double ahead_gdist = goal_map_(cell_x, cell_y).target_dist;
-       //     if (ahead_gdist < heading_dist) {
-                //if we haven't already tried rotating left since we've moved forward
+           if (ahead_gdist < heading_dist) { 
+//                 if we haven't already tried rotating left since we've moved forward
 //                 if (vtheta_samp < 0 && !stuck_left) {
 //                 swap = best_traj;
 //                 best_traj = comp_traj;
@@ -748,13 +754,13 @@ namespace base_local_planner{
                 comp_traj = swap;
                 heading_dist = ahead_gdist;
 //                 }
-      //      }
+           }
             }
         }
 
         vtheta_samp += dvtheta;
         }
-  //   }
+     }
 
     //do we have a legal trajectory
     if (best_traj->cost_ >= 0) {
@@ -912,14 +918,13 @@ namespace base_local_planner{
     generateTrajectory(x, y, theta, vx, vy, vtheta, vx_samp, vy_samp, vtheta_samp,
         acc_x, acc_y, acc_theta, impossible_cost, *comp_traj);
 
-    //if the new trajectory is better... let's take it
-    /*
+//     if the new trajectory is better... let's take it
        if(comp_traj->cost_ >= 0 && (comp_traj->cost_ < best_traj->cost_ || best_traj->cost_ < 0)){
        swap = best_traj;
        best_traj = comp_traj;
        comp_traj = swap;
        }
-       */
+       
 
     //we'll allow moving backwards slowly even when the static map shows it as blocked
     swap = best_traj;
@@ -943,7 +948,7 @@ namespace base_local_planner{
       escape_x_ = x;
       escape_y_ = y;
       escape_theta_ = theta;
-      escaping_ = true;
+     //  escaping_ = true; // Cesar
     }
 
     dist = hypot(x - escape_x_, y - escape_y_);

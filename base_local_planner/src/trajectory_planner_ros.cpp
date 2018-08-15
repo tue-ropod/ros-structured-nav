@@ -179,8 +179,7 @@ namespace base_local_planner {
           double resolution = costmap_->getResolution();
           gdist_scale *= resolution;
           pdist_scale *= resolution;
-          occdist_scale *= resolution;
-          path_distance_max /= resolution;
+          occdist_scale *= resolution;          
           
         } else {
           ROS_WARN("Trajectory Rollout planner initialized with param meter_scoring set to false. Set it to true to make your settins robust against changes of costmap resolution.");
@@ -320,20 +319,22 @@ namespace base_local_planner {
     cmd_vel.linear.y = 0;
     double ang_diff = angles::shortest_angular_distance(yaw, goal_th);
 
-    double v_theta_samp = ang_diff > 0.0 ? std::min(max_vel_th_,
-        std::max(min_in_place_vel_th_, ang_diff)) : std::max(min_vel_th_,
-        std::min(-1.0 * min_in_place_vel_th_, ang_diff));
-
-    //take the acceleration limits of the robot into account
-    double max_acc_vel = fabs(vel_yaw) + acc_lim_theta_ * sim_period_;
-    double min_acc_vel = fabs(vel_yaw) - acc_lim_theta_ * sim_period_;
-
-    v_theta_samp = sign(v_theta_samp) * std::min(std::max(fabs(v_theta_samp), min_acc_vel), max_acc_vel);
-
-    //we also want to make sure to send a velocity that allows us to stop when we reach the goal given our acceleration limits
-    double max_speed_to_stop = sqrt(2 * acc_lim_theta_ * fabs(ang_diff)); 
-
-    v_theta_samp = sign(v_theta_samp) * std::min(max_speed_to_stop, fabs(v_theta_samp));
+//     double v_theta_samp = ang_diff > 0.0 ? std::min(max_vel_th_,
+//         std::max(min_in_place_vel_th_, ang_diff)) : std::max(min_vel_th_,
+//         std::min(-1.0 * min_in_place_vel_th_, ang_diff));
+// 
+//     //take the acceleration limits of the robot into account
+//     double max_acc_vel = fabs(vel_yaw) + acc_lim_theta_ * sim_period_;
+//     double min_acc_vel = fabs(vel_yaw) - acc_lim_theta_ * sim_period_;
+// 
+//     v_theta_samp = sign(v_theta_samp) * std::min(std::max(fabs(v_theta_samp), min_acc_vel), max_acc_vel);
+// 
+//     //we also want to make sure to send a velocity that allows us to stop when we reach the goal given our acceleration limits
+//     double max_speed_to_stop = sqrt(2 * acc_lim_theta_ * fabs(ang_diff)); 
+// 
+//     v_theta_samp = sign(v_theta_samp) * std::min(max_speed_to_stop, fabs(v_theta_samp));
+    
+     double v_theta_samp = + 0.5* ang_diff; // Controller towards ang_diff = 0
 
     // Re-enforce min_in_place_vel_th_.  It is more important than the acceleration limits.
     v_theta_samp = v_theta_samp > 0.0

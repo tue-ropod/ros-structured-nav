@@ -60,6 +60,7 @@ namespace base_local_planner {
       double xv_, yv_, thetav_; ///< @brief The x, y, and theta velocities of the trajectory
 
       double cost_; ///< @brief The cost/score of the trajectory
+      double path_dist_traj_; ///< @brief The path dist trajectory
 
       double time_delta_; ///< @brief The time gap between points
 

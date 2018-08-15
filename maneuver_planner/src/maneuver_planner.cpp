@@ -659,7 +659,7 @@ bool ManeuverPlanner::searchTrajectoryOvertakeManeuver(const tf::Stamped<tf::Pos
     tf::Stamped<tf::Pose> refpoint_start_tf; // Start Refpoint in the global coordinate frame
     tf::Stamped<tf::Pose> refpoint_goal_tf; // Goal Refpoint in the global coordinate frame        
     tf::Stamped<tf::Pose> refpoint_goal_tf_refstart_coord; // Goal Refpoint in the the start position of the reference point coordinate frame
-    tf::Stamped<tf::Pose> refpoint_goal_tf_refmidway_coord; // Goal Refpoint in the the midway position of the reference point coordinate frame. Used in second maneuver
+    
     double dist_before_steering_refp, dist_after_steering_refp, signed_turning_radius_refp;
     double unsigned_radius;
     double dist_before_steering_center, dist_after_steering_center, signed_turning_radius_center;
@@ -668,17 +668,14 @@ bool ManeuverPlanner::searchTrajectoryOvertakeManeuver(const tf::Stamped<tf::Pos
     double start_yaw, goal_yaw, temp_yaw, temp_pitch, temp_roll;
     tf::Quaternion temp_quat;
     tf::Vector3 temp_vector3;
-    start_tf.getBasis().getEulerYPR(start_yaw, temp_pitch, temp_roll);             
-    goal_tf.getBasis().getEulerYPR(goal_yaw, temp_pitch, temp_roll);             
-
-    tf::Stamped<tf::Pose> goal_tf_start_coord; // Goal in the start vector coordinates
-    goal_tf_start_coord.frame_id_ = "/center_rotation_start_pos";
-
-    translate2D(goal_tf,-start_tf.getOrigin(),goal_tf_start_coord);
-    rotate2D(goal_tf_start_coord,-start_yaw,goal_tf_start_coord);
+    start_tf.getBasis().getEulerYPR(start_yaw, temp_pitch, temp_roll);     
+    
+    goal_tf.getBasis().getEulerYPR(goal_yaw, temp_pitch, temp_roll);     
+    
+    start_yaw = goal_yaw; // With this we just compute the intermediate point with same angle as the goal_yaw. This works better in corridors.
 
 
-    // Compute reference start and goal on global coordinates
+    // Compute reference start and reference goal on global coordinates
     refpoint_start_tf.frame_id_ = goal_tf.frame_id_;
     refpoint_start_tf.stamp_ = goal_tf.stamp_;
     rotate2D(refpoint_tf_robot_coord,start_yaw,refpoint_start_tf);
@@ -689,20 +686,23 @@ bool ManeuverPlanner::searchTrajectoryOvertakeManeuver(const tf::Stamped<tf::Pos
     rotate2D(refpoint_tf_robot_coord,goal_yaw,refpoint_goal_tf);
     translate2D(refpoint_goal_tf,goal_tf.getOrigin(),refpoint_goal_tf);
 
-    // Then Compute reference start and goal on reference start coordinates
+    // Then Compute reference goal on reference start coordinates
     refpoint_goal_tf_refstart_coord.frame_id_ = "/refpoint_start_pos";
     refpoint_goal_tf_refstart_coord.stamp_ = goal_tf.stamp_;
 
     translate2D(refpoint_goal_tf,-refpoint_start_tf.getOrigin(),refpoint_goal_tf_refstart_coord);
     refpoint_start_tf.getBasis().getEulerYPR(temp_yaw, temp_pitch, temp_roll);
     rotate2D(refpoint_goal_tf_refstart_coord,-temp_yaw,refpoint_goal_tf_refstart_coord);    
-
+    
+   
     tf::Stamped<tf::Pose> refpoint_midway_goal_tf_refstart_coord; // Midway Goal Refpoint in the the start position of the reference point coordinate frame
     tf::Stamped<tf::Pose> center_midway_goal_tf; // center of rotation of "ideal" midway goal in global coordinate frame
+    std::vector< tf::Stamped<tf::Pose> > refpoint_tf_robot_coord_vec;
+    
     // the minimiun angle for theta midway is the angle of the 
     double refp_theta_min;
     double refp_theta_max;
-    double theta_refp_goal;
+
 
 
     std::vector<geometry_msgs::PoseStamped> plan_first_m;
@@ -711,12 +711,13 @@ bool ManeuverPlanner::searchTrajectoryOvertakeManeuver(const tf::Stamped<tf::Pos
 
     double midway_side_ovt;
         
-    midway_side_ovt_search_.resetLinearSearch(midway_side_ovt_search_.lin_search_min_, midway_side_ovt_search_.lin_search_max_);
+    //midway_side_ovt_search_.resetLinearSearch(midway_side_ovt_search_.lin_search_min_, midway_side_ovt_search_.lin_search_max_);
+        midway_side_ovt_search_.resetMidSearch(midway_side_ovt_search_.lin_search_min_, midway_side_ovt_search_.lin_search_max_);
 
-    while( midway_side_ovt_search_.linearSearch(midway_side_ovt) & !maneuver_traj_succesful){         
+    while( midway_side_ovt_search_.midSearch(midway_side_ovt) & !maneuver_traj_succesful){         
                 
 
-        temp_vector3 = tf::Vector3( dist_without_obstacles + refpoint_tf_robot_coord.getOrigin().getX(), midway_side_ovt, 0.0);    
+        temp_vector3 = tf::Vector3( refpoint_goal_tf_refstart_coord.getOrigin().getX()*0.5 + refpoint_tf_robot_coord.getOrigin().getX(), midway_side_ovt + refpoint_goal_tf_refstart_coord.getOrigin().getY(), 0.0);    
         refpoint_goal_tf_refstart_coord.getBasis().getEulerYPR(temp_yaw,temp_pitch,temp_roll);                
         temp_quat.setRPY(0.0, 0.0, temp_yaw); 
         
@@ -729,7 +730,7 @@ bool ManeuverPlanner::searchTrajectoryOvertakeManeuver(const tf::Stamped<tf::Pos
         temp_quat.setRPY(0.0, 0.0, 0.0); 
         center_midway_goal_tf.setOrigin(-refpoint_tf_robot_coord.getOrigin());
         center_midway_goal_tf.setRotation(temp_quat);
-        rotate2D(center_midway_goal_tf,theta_refp_goal,center_midway_goal_tf); 
+//         rotate2D(center_midway_goal_tf,theta_refp_goal,center_midway_goal_tf); 
         translate2D(center_midway_goal_tf,refpoint_midway_goal_tf_refstart_coord.getOrigin(),center_midway_goal_tf);        
         
         translate2D(center_midway_goal_tf,refpoint_tf_robot_coord.getOrigin(),center_midway_goal_tf);        
@@ -742,8 +743,15 @@ bool ManeuverPlanner::searchTrajectoryOvertakeManeuver(const tf::Stamped<tf::Pos
         temp_goal_tf.setOrigin(center_midway_goal_tf.getOrigin()); 
         temp_goal_tf.setRotation(center_midway_goal_tf.getRotation()); 
         
+        
+        // For the first part We try to search a single maneuver, if not possible then go to a double maneuver.
+        // This is particularly useful when tehre is a replan during teh first phase
+        refpoint_tf_robot_coord_vec.push_back(refpoint_tf_robot_coord);
+            
         plan_first_m.clear();
-        maneuver_traj_succesful = searchTrajectoryLeftRightManeuver(temp_start_tf, temp_goal_tf, refpoint_tf_robot_coord, plan_first_m);
+        maneuver_traj_succesful = searchTrajectorySingleManeuver(temp_start_tf, temp_goal_tf, refpoint_tf_robot_coord_vec, plan_first_m);
+        if (!maneuver_traj_succesful)
+            maneuver_traj_succesful = searchTrajectoryLeftRightManeuver(temp_start_tf, temp_goal_tf, refpoint_tf_robot_coord, plan_first_m);
         if (!maneuver_traj_succesful)
             continue;
         
@@ -807,13 +815,7 @@ bool ManeuverPlanner::searchTrajectoryLeftRightManeuver(const tf::Stamped<tf::Po
     start_tf.getBasis().getEulerYPR(start_yaw, temp_pitch, temp_roll);             
     goal_tf.getBasis().getEulerYPR(goal_yaw, temp_pitch, temp_roll);             
     
-    tf::Stamped<tf::Pose> goal_tf_start_coord; // Goal in the start vector coordinates
-    goal_tf_start_coord.frame_id_ = "/center_rotation_start_pos";
-
-    translate2D(goal_tf,-start_tf.getOrigin(),goal_tf_start_coord);
-    rotate2D(goal_tf_start_coord,-start_yaw,goal_tf_start_coord);
-    
-    
+   
     // Compute reference start and goal on global coordinates
     refpoint_start_tf.frame_id_ = goal_tf.frame_id_;
     refpoint_start_tf.stamp_ = goal_tf.stamp_;
@@ -1338,16 +1340,28 @@ bool ManeuverPlanner::makePlan(const geometry_msgs::PoseStamped& start,
     
     if( maneuver_traj_succesful == false) // Maneuver planning failed. Attemp linear planner
     {
-        ROS_WARN("No single left or right maneuver possible. Execute default planner");
+        ROS_WARN("No single or double left or right maneuver possible. Execute default planner and or ");
         plan.clear();
         maneuver_traj_succesful = linePlanner(start, goal, plan, dist_without_obstacles);
+        if( maneuver_type != ManeuverPlanner::MANEUVER_STRAIGHT_OTHERWISE_OVERTAKE && maneuver_traj_succesful == false)
+        {
+            ROS_INFO("Overtake maneuver, Last resource"); 
+            refpoint_tf_robot_coord.frame_id_ = "/wholerobot_link";
+            refpoint_tf_robot_coord.stamp_ = goal_tf.stamp_;
+            temp_quat.setRPY(0.0,0.0,0.0);
+
+            temp_vector3 = tf::Vector3(topRightCorner_[0], topRightCorner_[1], 0.0);
+            refpoint_tf_robot_coord.setData(tf::Transform(temp_quat,temp_vector3));         
+            plan.clear();
+            maneuver_traj_succesful = searchTrajectoryOvertakeManeuver(start_tf, goal_tf, refpoint_tf_robot_coord, plan, dist_without_obstacles);                    
+        }
     }
 
     if(maneuver_traj_succesful == false){
         ROS_WARN("No free trajectory found");
         plan.clear();
     }
-    return true;
+    return maneuver_traj_succesful;
 
 }
 

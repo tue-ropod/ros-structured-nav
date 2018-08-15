@@ -15,7 +15,7 @@ ManeuverNavigation::~ManeuverNavigation() {};
 void ManeuverNavigation::init() 
 {    
 
-    costmap_ros_ = new costmap_2d::Costmap2DROS("global_costmap", tf_);
+    costmap_ros_ = new costmap_2d::Costmap2DROS("local_costmap", tf_); //global_costmap
     costmap_ = costmap_ros_->getCostmap();
     
     local_costmap_ros = new costmap_2d::Costmap2DROS("local_costmap", tf_);    
@@ -52,8 +52,7 @@ void ManeuverNavigation::init()
 bool ManeuverNavigation:: gotoGoal(const geometry_msgs::PoseStamped& goal) 
 {    
     goal_ = goal;
-    manv_nav_state_ = MANV_NAV_MAKE_INIT_PLAN;
-    publishZeroVelocity();
+    manv_nav_state_ = MANV_NAV_MAKE_INIT_PLAN;    
     local_nav_state_ = LOC_NAV_IDLE;
     return true; // TODO: implement
 
@@ -91,7 +90,7 @@ bool ManeuverNavigation::checkFootprintOnGlobalPlan(const std::vector<geometry_m
 {
     tf::Stamped<tf::Pose> global_pose;
     dist_before_obs = 0.0;
-    if(!costmap_ros_->getRobotPose(global_pose))
+    if( !getRobotPose(global_pose) )
         return false;    
     // First find the closes point from the robot pose to the path   
     double dist_to_path_min = 1e3;
@@ -134,6 +133,7 @@ bool ManeuverNavigation::checkFootprintOnGlobalPlan(const std::vector<geometry_m
             footprint_cost = footprintCost(pose_from_plan.getOrigin().getX(), pose_from_plan.getOrigin().getY(), yaw);
             if( footprint_cost < 0 )
             {
+                ROS_INFO("footprint_cost %f",footprint_cost);
                 is_traj_free = false;
                 dist_before_obs = total_ahead_distance;
                 break;
@@ -184,7 +184,7 @@ void ManeuverNavigation::callLocalNavigationStateMachine()
                 ROS_ERROR("local planner, The local planner could not find a valid plan.");
                 publishZeroVelocity();        
                 local_nav_state_ = LOC_NAV_IDLE;
-                manv_nav_state_   = MANV_NAV_IDLE;
+                manv_nav_state_   = MANV_NAV_MAKE_INIT_PLAN;
             }
             break;
         default:
@@ -231,9 +231,9 @@ void ManeuverNavigation::callManeuverNavigationStateMachine()
             }
             else
             {
-                ROS_ERROR("maneuver_navigation cannot make a plan due to obstacles");
+                ROS_ERROR("maneuver_navigation cannot make a plan due to obstacles, inform and keep trying");
                 local_nav_state_ = LOC_NAV_IDLE;
-                manv_nav_state_   = MANV_NAV_IDLE;
+                // manv_nav_state_   = MANV_NAV_IDLE; 
             }
             
             break;
@@ -241,7 +241,7 @@ void ManeuverNavigation::callManeuverNavigationStateMachine()
              if( !checkFootprintOnGlobalPlan(plan,max_ahead_dist, dist_before_obs) )
              {
                 ROS_INFO("Obstacle in front at %.2f m. Try to replan",dist_before_obs);
-                
+                publishZeroVelocity();  // TODO: Do this smarter by decreasing speed while computing new path    
                 if( !getRobotPose(global_pose) )
                     break;
                 
@@ -253,10 +253,10 @@ void ManeuverNavigation::callManeuverNavigationStateMachine()
                 }
                 else
                 {
-                    ROS_INFO("No replan possible. Stop and inform");
+                    ROS_INFO("No replan possible. Stop, inform and continue trrying");
                     publishZeroVelocity();        
                     local_nav_state_ = LOC_NAV_IDLE;
-                    manv_nav_state_   = MANV_NAV_IDLE;
+                    manv_nav_state_   = MANV_NAV_MAKE_INIT_PLAN;
                 }
                 
                  

@@ -211,6 +211,6 @@ add_executable(maneuver_navigation src/maneuver_navigation_rosnode.cpp  src/mane
 target_link_libraries(maneuver_navigation ${catkin_LIBRARIES})
 add_dependencies(maneuver_navigation ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
-add_library(maneuver_navigationED src/maneuver_navigation_rosnode.cpp  src/maneuver_navigation.cpp src/maneuver_navigation_ed.cpp)
-target_link_libraries(maneuver_navigation ${catkin_LIBRARIES})
-add_dependencies(maneuver_navigation ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
+# add_library(maneuver_navigationED src/maneuver_navigation_rosnode.cpp  src/maneuver_navigation.cpp src/maneuver_navigation_ed.cpp)
+# target_link_libraries(maneuver_navigation ${catkin_LIBRARIES})
+# add_dependencies(maneuver_navigation ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})

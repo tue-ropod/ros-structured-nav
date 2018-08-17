@@ -39,6 +39,8 @@ private:
     double local_navigation_rate_;
     
     double local_navigation_period_;    
+    
+    mn::ManeuverNavigation maneuver_navigator_;
 
 
 };

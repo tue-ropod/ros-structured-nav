@@ -24,7 +24,7 @@ ManeuverNavigationED::~ManeuverNavigationED()
 {
 }
 
-void (ManeuverNavigationED::initialize(ed::InitData& init)
+void ManeuverNavigationED::initialize(ed::InitData& init)
 {
     //ros::init(argc, argv, "route_navigation");
     ros::NodeHandle n("~");    

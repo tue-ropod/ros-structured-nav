@@ -716,8 +716,8 @@ bool ManeuverPlanner::searchTrajectoryOvertakeManeuver(const tf::Stamped<tf::Pos
 
     while( midway_side_ovt_search_.midSearch(midway_side_ovt) & !maneuver_traj_succesful){         
                 
-
-        temp_vector3 = tf::Vector3( refpoint_goal_tf_refstart_coord.getOrigin().getX()*0.5 + refpoint_tf_robot_coord.getOrigin().getX(), midway_side_ovt + refpoint_goal_tf_refstart_coord.getOrigin().getY(), 0.0);    
+        // refpoint_goal_tf_refstart_coord.getOrigin().getX()*0.5
+        temp_vector3 = tf::Vector3( refpoint_goal_tf_refstart_coord.getOrigin().getX()*0.3 + refpoint_tf_robot_coord.getOrigin().getX(), midway_side_ovt + refpoint_goal_tf_refstart_coord.getOrigin().getY(), 0.0);    
         refpoint_goal_tf_refstart_coord.getBasis().getEulerYPR(temp_yaw,temp_pitch,temp_roll);                
         temp_quat.setRPY(0.0, 0.0, temp_yaw); 
         
@@ -736,8 +736,8 @@ bool ManeuverPlanner::searchTrajectoryOvertakeManeuver(const tf::Stamped<tf::Pos
         translate2D(center_midway_goal_tf,refpoint_tf_robot_coord.getOrigin(),center_midway_goal_tf);        
         rotate2D(center_midway_goal_tf,start_yaw,center_midway_goal_tf); 
         translate2D(center_midway_goal_tf,start_tf.getOrigin(),center_midway_goal_tf);
-
-        
+        temp_quat.setRPY(0.0, 0.0, goal_yaw); // force rotation to be same as goal. TODO: check transformations!
+        center_midway_goal_tf.setRotation(temp_quat); 
                 
         temp_start_tf = start_tf;
         temp_goal_tf.setOrigin(center_midway_goal_tf.getOrigin()); 

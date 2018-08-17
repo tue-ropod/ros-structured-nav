@@ -732,13 +732,19 @@ namespace base_local_planner{
             && (vtheta_samp > dvtheta || vtheta_samp < -1 * dvtheta)){
             double x_r, y_r, th_r;
             unsigned int cell_x, cell_y;
+            int pointsize = comp_traj->getPointsSize();
+            if (pointsize >= 10)
+                comp_traj->getPoint(10,x_r, y_r, th_r); // Only look at a point close by
+            else
+                continue;
+            //comp_traj->getEndpoint(x_r, y_r, th_r); comp_traj->
             x_r += heading_lookahead_ * cos(th_r);
             y_r += heading_lookahead_ * sin(th_r);
             
-
+            double dist_to_goal =  hypot( final_goal_x_ - x, final_goal_y_ - y );
             //make sure that we'll be looking at a legal cell
-            if (costmap_.worldToMap(x_r, y_r, cell_x, cell_y)) {
-            double ahead_gdist = goal_map_(cell_x, cell_y).target_dist;
+            if(final_goal_position_valid_ && dist_to_goal> 0.2){
+                double ahead_gdist =  hypot( final_goal_x_ - x_r, final_goal_y_ - y_r );
            if (ahead_gdist < heading_dist) { 
 //                 if we haven't already tried rotating left since we've moved forward
 //                 if (vtheta_samp < 0 && !stuck_left) {
@@ -753,6 +759,7 @@ namespace base_local_planner{
                 best_traj = comp_traj;
                 comp_traj = swap;
                 heading_dist = ahead_gdist;
+//                 ROS_INFO("HEad dist better");
 //                 }
            }
             }

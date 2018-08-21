@@ -88,7 +88,9 @@ namespace maneuver_planner{
        * @return True if a valid plan was found, false otherwise
        */
       bool makePlan(const geometry_msgs::PoseStamped& start, 
-          const geometry_msgs::PoseStamped& goal, std::vector<geometry_msgs::PoseStamped>& plan);                  
+          const geometry_msgs::PoseStamped& goal, std::vector<geometry_msgs::PoseStamped>& plan);    
+      bool makePlan(const geometry_msgs::PoseStamped& start, 
+          const geometry_msgs::PoseStamped& goal, std::vector<geometry_msgs::PoseStamped>& plan, double & dist_without_obstacles);    
 
     private:
       costmap_2d::Costmap2DROS* costmap_ros_;
@@ -141,24 +143,26 @@ namespace maneuver_planner{
       int  determineManeuverType(const tf::Stamped<tf::Pose>& pose_target,  double &signed_max_turning_radius, double& x_intersection);      
       
       bool searchTrajectoryCompoundLeftRightManeuver(const tf::Stamped<tf::Pose>& start_tf, const tf::Stamped<tf::Pose>& goal_tf, 
-                                             const tf::Stamped<tf::Pose>& refpoint_tf_robot_coord, std::vector<geometry_msgs::PoseStamped>& plan);
+                                             const tf::Stamped<tf::Pose>& refpoint_tf_robot_coord, std::vector<geometry_msgs::PoseStamped>& plan, double & dist_without_obstacles);
       
       bool searchTrajectoryOvertakeManeuver(const tf::Stamped<tf::Pose>& start_tf, const tf::Stamped<tf::Pose>& goal_tf, 
                                                         const tf::Stamped<tf::Pose>& refpoint_tf_robot_coord, std::vector<geometry_msgs::PoseStamped>& plan, double & dist_without_obstacles);
       bool searchTrajectoryLeftRightManeuver(const tf::Stamped<tf::Pose>& start_tf, const tf::Stamped<tf::Pose>& goal_tf, 
-                                             const tf::Stamped<tf::Pose>& refpoint_tf_robot_coord, std::vector<geometry_msgs::PoseStamped>& plan);
+                                             const tf::Stamped<tf::Pose>& refpoint_tf_robot_coord, std::vector<geometry_msgs::PoseStamped>& plan, double & dist_without_obstacles);
       
       bool searchTrajectorySingleManeuver(const tf::Stamped<tf::Pose>& start_tf, const tf::Stamped<tf::Pose>& goal_tf, 
-                                           std::vector< tf::Stamped<tf::Pose> >& refpoint_tf_robot_coord_vec, std::vector<geometry_msgs::PoseStamped>& plan);
+                                           std::vector< tf::Stamped<tf::Pose> >& refpoint_tf_robot_coord_vec, std::vector<geometry_msgs::PoseStamped>& plan, double & dist_without_obstacles);
       bool checkFootprintTransformLocalToGlobal(const tf::Stamped<tf::Pose>& start_tf, 
                                 const tf::Stamped<tf::Pose>& goal_tf, const tf::Stamped<tf::Pose>& refpoint_tf_robot_coord, 
-                                const std::vector<tf::Pose> &local_plan_refp, std::vector<geometry_msgs::PoseStamped>& plan);
+                                const std::vector<tf::Pose> &local_plan_refp, std::vector<geometry_msgs::PoseStamped>& plan, double &dist_without_obstacles );
       
       
       void generateDublinTrajectory(const double& dist_before_steering_refp, const double& dist_after_steering_refp, 
                                const double& signed_turning_radius_refp, const double& theta_refp_goal, std::vector<tf::Pose> &local_plan_refp);
       bool linePlanner(const geometry_msgs::PoseStamped& start,
                                const geometry_msgs::PoseStamped& goal, std::vector<geometry_msgs::PoseStamped>& plan, double &dist_without_obstacles);
+      bool makePlanUntilPossible(const geometry_msgs::PoseStamped& start,
+                               const geometry_msgs::PoseStamped& goal, std::vector<geometry_msgs::PoseStamped>& plan, double & dist_without_obstacles);
       
       
       enum curveType

@@ -611,8 +611,11 @@ bool ManeuverPlanner::searchTrajectoryCompoundLeftRightManeuver(const tf::Stampe
         temp_goal_tf.setOrigin(center_midway_goal_tf.getOrigin()); 
         temp_goal_tf.setRotation(center_midway_goal_tf.getRotation()); 
         
+        dist_without_obstacles = 0.0;
+        double dist_without_obstacles_single_maneuver;  
         plan_first_m.clear();
-        maneuver_traj_succesful = searchTrajectorySingleManeuver(temp_start_tf, temp_goal_tf, refpoint_tf_robot_coord_vec, plan_first_m, dist_without_obstacles);
+        maneuver_traj_succesful = searchTrajectorySingleManeuver(temp_start_tf, temp_goal_tf, refpoint_tf_robot_coord_vec, plan_first_m, dist_without_obstacles_single_maneuver);
+        dist_without_obstacles = dist_without_obstacles_single_maneuver;
         if (!maneuver_traj_succesful)
             continue;
         
@@ -630,20 +633,20 @@ bool ManeuverPlanner::searchTrajectoryCompoundLeftRightManeuver(const tf::Stampe
         temp_goal_tf.setRotation(goal_tf.getRotation());
         
         plan_second_m.clear();
-        maneuver_traj_succesful = searchTrajectorySingleManeuver(temp_start_tf, temp_goal_tf, refpoint_tf_robot_coord_vec, plan_second_m, dist_without_obstacles);
+        maneuver_traj_succesful = searchTrajectorySingleManeuver(temp_start_tf, temp_goal_tf, refpoint_tf_robot_coord_vec, plan_second_m, dist_without_obstacles_single_maneuver);
+        dist_without_obstacles = dist_without_obstacles + dist_without_obstacles_single_maneuver;
         
 //         ROS_INFO("Second trajectory maneuver_traj_succesful: %d", maneuver_traj_succesful);
-        if( maneuver_traj_succesful )
+
+        for (plan_iterator = plan_first_m.begin(); plan_iterator != plan_first_m.end(); plan_iterator++)
         {
-            for (plan_iterator = plan_first_m.begin(); plan_iterator != plan_first_m.end(); plan_iterator++)
-            {
-                plan.push_back(*plan_iterator);
-            }
-            for (plan_iterator = plan_second_m.begin(); plan_iterator != plan_second_m.end(); plan_iterator++)
-            {
-                plan.push_back(*plan_iterator);
-            }            
-        }        
+            plan.push_back(*plan_iterator);
+        }
+        for (plan_iterator = plan_second_m.begin(); plan_iterator != plan_second_m.end(); plan_iterator++)
+        {
+            plan.push_back(*plan_iterator);
+        }            
+     
         
   }
   
@@ -753,13 +756,18 @@ bool ManeuverPlanner::searchTrajectoryOvertakeManeuver(const tf::Stamped<tf::Pos
         // For the first part We try to search a single maneuver, if not possible then go to a double maneuver.
         // This is particularly useful when tehre is a replan during teh first phase
         refpoint_tf_robot_coord_vec.push_back(refpoint_tf_robot_coord);
-            
+        dist_without_obstacles = 0.0;
+        double dist_without_obstacles_single_maneuver;    
         plan_first_m.clear();
-        maneuver_traj_succesful = searchTrajectorySingleManeuver(temp_start_tf, temp_goal_tf, refpoint_tf_robot_coord_vec, plan_first_m, dist_without_obstacles);
+        maneuver_traj_succesful = searchTrajectorySingleManeuver(temp_start_tf, temp_goal_tf, refpoint_tf_robot_coord_vec, plan_first_m, dist_without_obstacles_single_maneuver);
         if (!maneuver_traj_succesful)
-            maneuver_traj_succesful = searchTrajectoryLeftRightManeuver(temp_start_tf, temp_goal_tf, refpoint_tf_robot_coord, plan_first_m, dist_without_obstacles);
+            maneuver_traj_succesful = searchTrajectoryLeftRightManeuver(temp_start_tf, temp_goal_tf, refpoint_tf_robot_coord, plan_first_m, dist_without_obstacles_single_maneuver);
+        
+        dist_without_obstacles = dist_without_obstacles_single_maneuver;
         if (!maneuver_traj_succesful)
             continue;
+        
+        
         
         maneuver_traj_succesful = false;
     //         ROS_INFO("First local trajectory created. Second maneuver reached");          
@@ -774,23 +782,22 @@ bool ManeuverPlanner::searchTrajectoryOvertakeManeuver(const tf::Stamped<tf::Pos
         
         plan_second_m.clear();
         maneuver_traj_succesful = searchTrajectoryLeftRightManeuver(temp_start_tf, temp_goal_tf, refpoint_tf_robot_coord, plan_second_m, dist_without_obstacles);
-        
+        dist_without_obstacles = dist_without_obstacles + dist_without_obstacles_single_maneuver;
     //         ROS_INFO("Second trajectory maneuver_traj_succesful: %d", maneuver_traj_succesful);
         
         
     }
   
-    if( maneuver_traj_succesful )
+
+    for (plan_iterator = plan_first_m.begin(); plan_iterator != plan_first_m.end(); plan_iterator++)
     {
-        for (plan_iterator = plan_first_m.begin(); plan_iterator != plan_first_m.end(); plan_iterator++)
-        {
-            plan.push_back(*plan_iterator);
-        }
-        for (plan_iterator = plan_second_m.begin(); plan_iterator != plan_second_m.end(); plan_iterator++)
-        {
-            plan.push_back(*plan_iterator);
-        }            
-    }   
+        plan.push_back(*plan_iterator);
+    }
+    for (plan_iterator = plan_second_m.begin(); plan_iterator != plan_second_m.end(); plan_iterator++)
+    {
+        plan.push_back(*plan_iterator);
+    }            
+
   
 //   ROS_INFO("Total trajectory created. Check trajectory, free: %d", (int) maneuver_traj_succesful);
   return maneuver_traj_succesful;
@@ -1378,7 +1385,6 @@ bool ManeuverPlanner::makePlanUntilPossible(const geometry_msgs::PoseStamped& st
 
     if(maneuver_traj_succesful == false){
         ROS_WARN("No free trajectory found");
-        plan.clear();
     }
     return maneuver_traj_succesful;
 

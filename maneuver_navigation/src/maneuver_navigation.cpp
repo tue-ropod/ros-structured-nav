@@ -32,6 +32,10 @@ void ManeuverNavigation::init()
     local_nav_state_ = LOC_NAV_IDLE;
     manv_nav_state_  = MANV_NAV_IDLE;
     
+    MAX_AHEAD_DIST_BEFORE_REPLANNING = 2.0;
+    REPLANNING_HYSTERESIS_DISTANCE = 1.0;
+    goal_free_ =  false;
+    
     vel_pub_ = nh_.advertise<geometry_msgs::Twist>("cmd_vel", 1);
     
     initialized_ = true;
@@ -209,7 +213,6 @@ bool ManeuverNavigation::getRobotPose(tf::Stamped<tf::Pose> & global_pose)
 
 void ManeuverNavigation::callManeuverNavigationStateMachine() 
 {
-    double max_ahead_dist = 4.0;
     double dist_before_obs;  
     
     tf::Stamped<tf::Pose> global_pose;
@@ -223,8 +226,10 @@ void ManeuverNavigation::callManeuverNavigationStateMachine()
             if( !getRobotPose(global_pose) )
                 break;
             
-            tf::poseStampedTFToMsg(global_pose, start);              
-            if( maneuver_planner.makePlan(start,goal_, plan) )
+            tf::poseStampedTFToMsg(global_pose, start);            
+            goal_free_ = maneuver_planner.makePlan(start,goal_, plan, dist_before_obs);            
+            ROS_INFO("dist_before_obs: %f", dist_before_obs);
+            if( dist_before_obs > MAX_AHEAD_DIST_BEFORE_REPLANNING || goal_free_ == true)
             {
                 local_nav_state_ = LOC_NAV_SET_PLAN;
                 manv_nav_state_  = MANV_NAV_BUSY;
@@ -232,13 +237,14 @@ void ManeuverNavigation::callManeuverNavigationStateMachine()
             else
             {
                 ROS_ERROR("maneuver_navigation cannot make a plan due to obstacles, inform and keep trying");
+                publishZeroVelocity();  
                 local_nav_state_ = LOC_NAV_IDLE;
                 // manv_nav_state_   = MANV_NAV_IDLE; 
             }
             
             break;
          case MANV_NAV_BUSY:
-             if( !checkFootprintOnGlobalPlan(plan,max_ahead_dist, dist_before_obs) )
+             if( !checkFootprintOnGlobalPlan(plan, MAX_AHEAD_DIST_BEFORE_REPLANNING, dist_before_obs) )
              {
                 ROS_INFO("Obstacle in front at %.2f m. Try to replan",dist_before_obs);
                 publishZeroVelocity();  // TODO: Do this smarter by decreasing speed while computing new path    
@@ -257,9 +263,21 @@ void ManeuverNavigation::callManeuverNavigationStateMachine()
                     publishZeroVelocity();        
                     local_nav_state_ = LOC_NAV_IDLE;
                     manv_nav_state_   = MANV_NAV_MAKE_INIT_PLAN;
-                }
+                }                                 
+             }
+             
+             if (goal_free_ == false && dist_before_obs < (MAX_AHEAD_DIST_BEFORE_REPLANNING+REPLANNING_HYSTERESIS_DISTANCE)) // When the goal was not free and we are close to end of temporary plan, replan
+             {
+                if( !getRobotPose(global_pose) )
+                    break;
                 
-                 
+                tf::poseStampedTFToMsg(global_pose, start);            
+                goal_free_ = maneuver_planner.makePlan(start,goal_, plan, dist_before_obs);            
+                if( dist_before_obs > MAX_AHEAD_DIST_BEFORE_REPLANNING )
+                {
+                    local_nav_state_ = LOC_NAV_SET_PLAN;
+                    manv_nav_state_  = MANV_NAV_BUSY;
+                }              
              }
              
             break;

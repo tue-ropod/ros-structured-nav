@@ -25,8 +25,7 @@
 namespace mn {
     
 class ManeuverNavigation
-{
-
+{    
     enum { LOC_NAV_IDLE = 0,
            LOC_NAV_SET_PLAN,
            LOC_NAV_BUSY,
@@ -73,9 +72,12 @@ public:
    costmap_2d::Costmap2DROS* costmap_ros_, * local_costmap_ros;
    costmap_2d::Costmap2D* costmap_;
    base_local_planner::WorldModel* world_model_; ///< @brief The world model that the controller will use  
-   
+      
 private:      
+   double MAX_AHEAD_DIST_BEFORE_REPLANNING;     // TODO: make static const?
+   double REPLANNING_HYSTERESIS_DISTANCE;       // TODO: make static const?
    bool initialized_;
+   bool goal_free_;
    tf::TransformListener& tf_;
    geometry_msgs::PoseStamped goal_;
    int local_nav_state_, manv_nav_state_;

@@ -122,9 +122,9 @@ void ManeuverPlanner::initialize(std::string name, costmap_2d::Costmap2DROS* cos
         }
         
        
-        radius_search_ = parameter_generator::ParameterGenerator(0.1, 2.0, 2.0, 0.1, 10);
+        radius_search_ = parameter_generator::ParameterGenerator(0.2, 2.0, 2.0, 0.05, 20);
         midway_scale_lr_search_ = parameter_generator::ParameterGenerator(0.05, 0.95, 1.0, 0.1, 10);
-        midway_side_ovt_search_ = parameter_generator::ParameterGenerator(0.2, 2.0, 2.0, 0.1, 20);
+        midway_side_ovt_search_ = parameter_generator::ParameterGenerator(0.2, 2.0, 2.0, 0.2, 20);
         initialized_ = true;
     }
     else
@@ -1291,13 +1291,13 @@ bool ManeuverPlanner::makePlanUntilPossible(const geometry_msgs::PoseStamped& st
             temp_quat.setRPY(0.0,0.0,0.0);
             refpoint_tf_robot_coord_vec.clear();
             
-            temp_vector3 = tf::Vector3(0.0, 0.0, 0.0);
-            refpoint_tf_robot_coord.setData(tf::Transform(temp_quat,temp_vector3));
-            refpoint_tf_robot_coord_vec.push_back(refpoint_tf_robot_coord);             
-            
             temp_vector3 = tf::Vector3(right_side_ref_point_[0], right_side_ref_point_[1], 0.0);
             refpoint_tf_robot_coord.setData(tf::Transform(temp_quat,temp_vector3));            
-            refpoint_tf_robot_coord_vec.push_back(refpoint_tf_robot_coord);              
+            refpoint_tf_robot_coord_vec.push_back(refpoint_tf_robot_coord);                    
+            
+            temp_vector3 = tf::Vector3(0.0, 0.0, 0.0);
+            refpoint_tf_robot_coord.setData(tf::Transform(temp_quat,temp_vector3));
+            refpoint_tf_robot_coord_vec.push_back(refpoint_tf_robot_coord);                               
             
             temp_vector3 = tf::Vector3(topLeftCorner_[0], topLeftCorner_[1], 0.0);
             refpoint_tf_robot_coord.setData(tf::Transform(temp_quat,temp_vector3));            

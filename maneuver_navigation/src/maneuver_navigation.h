@@ -18,8 +18,11 @@
 #include <maneuver_planner/maneuver_planner.h>
 
 // Local planner includes
-#include <base_local_planner/trajectory_planner_ros.h>
+// #include <base_local_planner/trajectory_planner_ros.h>
+// #include <teb_local_planner/teb_local_planner_ros.h>
 
+#include <nav_core/base_local_planner.h>
+#include <pluginlib/class_loader.h>
 
 
 namespace mn {
@@ -66,7 +69,8 @@ public:
     
     
    maneuver_planner::ManeuverPlanner  maneuver_planner;   
-   base_local_planner::TrajectoryPlannerROS local_planner;
+//    base_local_planner::TrajectoryPlannerROS local_planner;
+//    teb_local_planner::TebLocalPlannerROS local_planner;
    std::vector<geometry_msgs::PoseStamped> plan;        
    
    costmap_2d::Costmap2DROS* costmap_ros_, * local_costmap_ros;
@@ -82,8 +86,11 @@ private:
    geometry_msgs::PoseStamped goal_;
    int local_nav_state_, manv_nav_state_;
    int local_nav_next_state_, manv_nav_next_state_;      
+   int local_plan_infeasible_, local_plan_infeasible_cnt_;
    ros::Publisher vel_pub_;
    ros::NodeHandle& nh_;
+   pluginlib::ClassLoader<nav_core::BaseLocalPlanner> blp_loader_;
+   boost::shared_ptr<nav_core::BaseLocalPlanner> local_planner_;
    
    bool getRobotPose(tf::Stamped<tf::Pose> & global_pose);
       

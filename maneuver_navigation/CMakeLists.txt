@@ -13,8 +13,11 @@ find_package(catkin REQUIRED COMPONENTS
   roscpp
   tf
   costmap_2d
-  base_local_planner  
   maneuver_planner
+#   base_local_planner  
+#   teb_local_planner
+  pluginlib
+  nav_core
   ed
 )
 
@@ -112,7 +115,7 @@ generate_messages(
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES maneuver_navigation
-  CATKIN_DEPENDS  geometry_msgs nav_msgs roscpp  tf costmap_2d base_local_planner maneuver_planner
+  CATKIN_DEPENDS  geometry_msgs nav_msgs roscpp  tf costmap_2d maneuver_planner
 #  DEPENDS system_lib
 )
 

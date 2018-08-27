@@ -3,32 +3,53 @@
 namespace mn
 {
 ManeuverNavigation::ManeuverNavigation(tf::TransformListener& tf, ros::NodeHandle& nh) :
-tf_(tf), nh_(nh)
+tf_(tf), nh_(nh), blp_loader_("nav_core", "nav_core::BaseLocalPlanner")
 {    
     
     initialized_ = false;
 };
 
 
-ManeuverNavigation::~ManeuverNavigation() {};
+ManeuverNavigation::~ManeuverNavigation() 
+{
+    local_planner_.reset();
+};
 
 void ManeuverNavigation::init() 
 {    
 
-    costmap_ros_ = new costmap_2d::Costmap2DROS("local_costmap", tf_); //global_costmap
-    costmap_ = costmap_ros_->getCostmap();
+
     
     local_costmap_ros = new costmap_2d::Costmap2DROS("local_costmap", tf_);    
     
+//     costmap_ros_ = new costmap_2d::Costmap2DROS("local_costmap", tf_); //global_costmap
+    costmap_ros_ = local_costmap_ros;
+    costmap_ = costmap_ros_->getCostmap();
+    
     world_model_ = new base_local_planner::CostmapModel(*costmap_);
     maneuver_planner = maneuver_planner::ManeuverPlanner("maneuver_planner",costmap_ros_);    
-    try{
-        local_planner.initialize("TrajectoryPlannerROS", &tf_, local_costmap_ros);
-    } catch(...) {
-      // 
-        ROS_FATAL("Failed to initialize the global planner");
-        exit(1);
-    }
+//     try{
+//         local_planner.initialize("TrajectoryPlannerROS", &tf_, local_costmap_ros);
+//     } catch(...) {
+//       // 
+//         ROS_FATAL("Failed to initialize the global planner");
+//         exit(1);
+//     }
+    
+    //create a local planner
+    std::string local_planner_str;
+    nh_.param("base_local_planner", local_planner_str, std::string("base_local_planner/TrajectoryPlannerROS"));
+    try {      
+      local_planner_ = blp_loader_.createInstance(local_planner_str);
+      //ROS_INFO("Created local_planner %s", local_planner_str.c_str());
+      local_planner_->initialize(blp_loader_.getName(local_planner_str), &tf_, local_costmap_ros);
+    } catch (const pluginlib::PluginlibException& ex) {
+      //ROS_FATAL("Failed to create the %s planner, are you sure it is properly registered and that the containing library is built? Exception: %s", local_planner.c_str(), ex.what());
+        ROS_FATAL("Failed to create the local planner");
+      exit(1);
+    }    
+    
+    
     local_nav_state_ = LOC_NAV_IDLE;
     manv_nav_state_  = MANV_NAV_IDLE;
     
@@ -160,7 +181,7 @@ void ManeuverNavigation::callLocalNavigationStateMachine()
             break;                    
         case LOC_NAV_SET_PLAN:
             
-            if (!local_planner.setPlan(plan))
+            if (!local_planner_->setPlan(plan))
             {
                 ROS_ERROR("Plan not set");
                 local_nav_state_  = LOC_NAV_IDLE;
@@ -172,23 +193,25 @@ void ManeuverNavigation::callLocalNavigationStateMachine()
             break;  
         case LOC_NAV_BUSY:  
             
-            if(local_planner.isGoalReached())
+            if(local_planner_->isGoalReached())
             {
                 ROS_INFO("local planner, Goal reached!");
                 local_nav_state_ = LOC_NAV_IDLE;
                 manv_nav_state_   = MANV_NAV_IDLE;
             }
-            else if(local_planner.computeVelocityCommands(cmd_vel))
+            else if(local_planner_->computeVelocityCommands(cmd_vel))
             {
                 //make sure that we send the velocity command to the base
                 vel_pub_.publish(cmd_vel);
+                local_plan_infeasible_ = false;
             }
             else 
             {
                 ROS_ERROR("local planner, The local planner could not find a valid plan.");
-                publishZeroVelocity();        
-                local_nav_state_ = LOC_NAV_IDLE;
-                manv_nav_state_   = MANV_NAV_MAKE_INIT_PLAN;
+                local_plan_infeasible_ = true;
+//                 publishZeroVelocity();        
+//                 local_nav_state_ = LOC_NAV_IDLE;
+//                 manv_nav_state_   = MANV_NAV_MAKE_INIT_PLAN;
             }
             break;
         default:
@@ -238,7 +261,7 @@ void ManeuverNavigation::callManeuverNavigationStateMachine()
             {
                 ROS_ERROR("maneuver_navigation cannot make a plan due to obstacles, inform and keep trying");
                 publishZeroVelocity();  
-                local_nav_state_ = LOC_NAV_IDLE;
+              //  local_nav_state_ = LOC_NAV_IDLE;
                 // manv_nav_state_   = MANV_NAV_IDLE; 
             }
             
@@ -261,7 +284,7 @@ void ManeuverNavigation::callManeuverNavigationStateMachine()
                 {
                     ROS_INFO("No replan possible. Stop, inform and continue trrying");
                     publishZeroVelocity();        
-                    local_nav_state_ = LOC_NAV_IDLE;
+                   // local_nav_state_ = LOC_NAV_IDLE;
                     manv_nav_state_   = MANV_NAV_MAKE_INIT_PLAN;
                 }                                 
              }

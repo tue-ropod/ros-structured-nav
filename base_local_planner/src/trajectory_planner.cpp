@@ -319,7 +319,8 @@ namespace base_local_planner{
 
         // with heading scoring, we take into account heading diff, and also only score
         // path and goal distance for one point of the trajectory
-        if (heading_scoring_) {
+//         if (i == (num_steps-1) && heading_scoring_) {
+        if (i == (num_steps-1) && heading_scoring_) {
 //           if (time >= heading_scoring_timestep_ && time < heading_scoring_timestep_ + dt) {
             heading_diff = headingDiff(cell_x, cell_y, x_i, y_i, theta_i);
 //           } else {

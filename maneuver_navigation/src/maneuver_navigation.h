@@ -88,6 +88,7 @@ private:
    int local_nav_next_state_, manv_nav_next_state_;      
    int local_plan_infeasible_, local_plan_infeasible_cnt_;
    ros::Publisher vel_pub_;
+   ros::Publisher pub_navigation_fb_;
    ros::NodeHandle& nh_;
    pluginlib::ClassLoader<nav_core::BaseLocalPlanner> blp_loader_;
    boost::shared_ptr<nav_core::BaseLocalPlanner> local_planner_;

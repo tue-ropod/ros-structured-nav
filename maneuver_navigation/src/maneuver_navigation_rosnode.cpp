@@ -35,7 +35,7 @@ int main(int argc, char** argv)
     double local_navigation_rate, local_navigation_period;    
 
 
-    n.param<double>("prediction_feasibility_check_rate", prediction_feasibility_check_rate, 2.0);
+    n.param<double>("prediction_feasibility_check_rate", prediction_feasibility_check_rate, 3.0);
     n.param<double>("local_navigation_rate", local_navigation_rate, 10.0); // local_navigation_rate>prediction_feasibility_check_rate
     ros::Rate rate(local_navigation_rate);
     prediction_feasibility_check_period = 1.0/prediction_feasibility_check_rate;
@@ -59,6 +59,13 @@ int main(int argc, char** argv)
         // Execute local navigation
         maneuver_navigator.callLocalNavigationStateMachine();
         
+        if (goal_received)
+        {
+            goal_received = false;             
+            maneuver_navigator.gotoGoal(goal);
+            prediction_feasibility_check_cycle_time = prediction_feasibility_check_period;
+        }   
+        
         // Execute route navigation
         if( prediction_feasibility_check_cycle_time > prediction_feasibility_check_period)
         { 
@@ -66,11 +73,7 @@ int main(int argc, char** argv)
             maneuver_navigator.callManeuverNavigationStateMachine();
         }
 
-        if (goal_received)
-        {
-            goal_received = false;             
-            maneuver_navigator.gotoGoal(goal);
-        }        
+     
         
 
         ros::spinOnce();

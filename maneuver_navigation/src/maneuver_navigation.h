@@ -57,6 +57,7 @@ public:
 //     void stopNavigation();
 //     bool isPositionValid();    
 //     bool isGoalReached();
+    void reinitPlanner(const geometry_msgs::Polygon& new_footprint);
     bool isGoalReachable();
 //     bool executeCycle();
     void publishZeroVelocity();

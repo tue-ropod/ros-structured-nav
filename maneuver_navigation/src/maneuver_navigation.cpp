@@ -27,7 +27,7 @@ void ManeuverNavigation::init()
     costmap_ = costmap_ros_->getCostmap();
     
     world_model_ = new base_local_planner::CostmapModel(*costmap_);
-    maneuver_planner = maneuver_planner::ManeuverPlanner("maneuver_planner",costmap_ros_);    
+    maneuver_planner = maneuver_planner::ManeuverPlanner("maneuver_planner",costmap_ros_);
 //     try{
 //         local_planner.initialize("TrajectoryPlannerROS", &tf_, local_costmap_ros);
 //     } catch(...) {
@@ -64,6 +64,25 @@ void ManeuverNavigation::init()
     initialized_ = true;
 
 };
+
+void ManeuverNavigation::reinitPlanner(const geometry_msgs::Polygon& new_footprint) 
+{  
+    costmap_ros_->setUnpaddedRobotFootprintPolygon(new_footprint);
+    // initialize maneuver planner
+    maneuver_planner = maneuver_planner::ManeuverPlanner("maneuver_planner",costmap_ros_);
+    // Initializelocal planner
+    std::string local_planner_str;
+    nh_.param("base_local_planner", local_planner_str, std::string("base_local_planner/TrajectoryPlannerROS"));
+    local_planner_.reset();    
+    try {      
+      local_planner_ = blp_loader_.createInstance(local_planner_str);
+      local_planner_->initialize(blp_loader_.getName(local_planner_str), &tf_, local_costmap_ros);
+    } catch (const pluginlib::PluginlibException& ex) {
+      //ROS_FATAL("Failed to create the %s planner, are you sure it is properly registered and that the containing library is built? Exception: %s", local_planner.c_str(), ex.what());
+        ROS_FATAL("Failed to create the local planner");
+      exit(1);
+    } 
+}
 
   void ManeuverNavigation::publishZeroVelocity(){
     geometry_msgs::Twist cmd_vel;

@@ -14,6 +14,17 @@ void goalCallback(const geometry_msgs::PoseStamped::ConstPtr& goal_msg)
     goal_received = true;
 }
 
+bool reinit_planner_withload = false;
+bool reinit_planner_noload = false;
+void loadAttachedCallback(const std_msgs::Bool::ConstPtr& load_attached_msg)
+{   
+    ROS_INFO("Reinit PLanner");
+    if( load_attached_msg->data == true )
+        reinit_planner_withload = true;
+    else
+        reinit_planner_noload = true;
+}
+
 ManeuverNavigationED::ManeuverNavigationED()
 {
 }
@@ -41,6 +52,7 @@ void ManeuverNavigationED::initialize(ed::InitData& init)
     local_navigation_period_ = 1.0/local_navigation_rate_;
     
     ros::Subscriber goal_cmd_sub = n.subscribe<geometry_msgs::PoseStamped>("/route_navigation/goal", 10, goalCallback);
+    ros::Subscriber load_attached_sub = n.subscribe<std_msgs::Bool>("/route_navigation/load_attached", 10, loadAttachedCallback);
         
 //     /move_base_simple/goal
     tf::TransformListener tf( ros::Duration(10) );
@@ -62,19 +74,63 @@ void ManeuverNavigationED::initialize(ed::InitData& init)
         // Execute local navigation
         maneuver_navigator_.callLocalNavigationStateMachine();
         
+        if (goal_received)
+        {
+            goal_received = false;             
+        
+            maneuver_navigator_.gotoGoal(goal);
+            prediction_feasibility_check_cycle_time_ = prediction_feasibility_check_period_;
+        }         
+        
         // Execute route navigation
         if( prediction_feasibility_check_cycle_time_ > prediction_feasibility_check_period_)
         { 
             prediction_feasibility_check_cycle_time_ = 0.0;
             maneuver_navigator_.callManeuverNavigationStateMachine();
         }
-
-        if (goal_received)
-        {
-            goal_received = false;             
         
-            maneuver_navigator_.gotoGoal(goal);
+        
+       if(reinit_planner_withload)
+        {
+            reinit_planner_withload = false;
+            // TODO:: Read load footprint from file and do it asynchronously for not interrupting the therad
+            geometry_msgs::Polygon newfootprint;
+            geometry_msgs::Point32 point_footprint;
+            point_footprint.x = -0.1; point_footprint.y =  0.36; point_footprint.z = 0.0;
+            newfootprint.points.push_back(point_footprint);
+            point_footprint.x =  1.3; point_footprint.y =  0.36; point_footprint.z = 0.0;
+            newfootprint.points.push_back(point_footprint);
+            point_footprint.x =  1.3; point_footprint.y = -0.36; point_footprint.z = 0.0;
+            newfootprint.points.push_back(point_footprint);
+            point_footprint.x = -0.1; point_footprint.y = -0.36; point_footprint.z = 0.0;
+            newfootprint.points.push_back(point_footprint);
+            system("rosparam load ~/ropod-project-software/catkin_workspace/src/applications/ropod_navigation_test/config/parameters/teb_local_planner_params.yaml maneuver_navigation");
+
+            maneuver_navigator_.reinitPlanner(newfootprint);  // Dynamic reconfigurationdid not work so we had to do it in two ways. The localcostmap
+            // was updated directly with functins, and the tebplanner by setting firts the parameters and then reloading the planner
+
+        }           
+        
+        if(reinit_planner_noload)
+        {
+            reinit_planner_noload = false;
+            // TODO:: Read load footprint from file and do it asynchronously for not interrupting the therad
+            geometry_msgs::Polygon newfootprint;
+            geometry_msgs::Point32 point_footprint;
+            point_footprint.x = -0.36; point_footprint.y =  0.36; point_footprint.z = 0.0;
+            newfootprint.points.push_back(point_footprint);
+            point_footprint.x =  0.36; point_footprint.y =  0.36; point_footprint.z = 0.0;
+            newfootprint.points.push_back(point_footprint);
+            point_footprint.x =  0.36; point_footprint.y = -0.36; point_footprint.z = 0.0;
+            newfootprint.points.push_back(point_footprint);
+            point_footprint.x = -0.36; point_footprint.y = -0.36; point_footprint.z = 0.0;
+            newfootprint.points.push_back(point_footprint);
+            system("rosparam load ~/ropod-project-software/catkin_workspace/src/applications/ropod_navigation_test/config/parameters/teb_local_planner_params_ropod.yaml maneuver_navigation");
+            maneuver_navigator_.reinitPlanner(newfootprint);  // Dynamic reconfigurationdid not work so we had to do it in two ways. The localcostmap
+            // was updated directly with functins, and the tebplanner by setting firts the parameters and then reloading the planner            
         }        
+
+       
 
       //  ros::spinOnce();
      //   rate.sleep();

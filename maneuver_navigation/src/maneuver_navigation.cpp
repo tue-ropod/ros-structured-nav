@@ -68,6 +68,7 @@ void ManeuverNavigation::init()
 void ManeuverNavigation::reinitPlanner(const geometry_msgs::Polygon& new_footprint) 
 {  
     costmap_ros_->setUnpaddedRobotFootprintPolygon(new_footprint);
+    costmap_ros_->resetLayers();
     // initialize maneuver planner
     maneuver_planner = maneuver_planner::ManeuverPlanner("maneuver_planner",costmap_ros_);
     // Initializelocal planner

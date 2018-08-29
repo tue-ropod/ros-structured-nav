@@ -22,7 +22,7 @@ public:
 
     ManeuverNavigationED();
 
-    ~ManeuverNavigationED();
+    ~ManeuverNavigationED();    
 
     void initialize(ed::InitData& init);
 

@@ -88,6 +88,7 @@ private:
    int local_nav_state_, manv_nav_state_;
    int local_nav_next_state_, manv_nav_next_state_;      
    int local_plan_infeasible_, local_plan_infeasible_cnt_;
+   double xy_goal_tolerance_, yaw_goal_tolerance_;
    ros::Publisher vel_pub_;
    ros::Publisher pub_navigation_fb_;
    ros::NodeHandle& nh_;

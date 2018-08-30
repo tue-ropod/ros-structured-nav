@@ -93,16 +93,16 @@ int main(int argc, char** argv)
         if(reinit_planner_withload)
         {
             reinit_planner_withload = false;
-            // TODO:: Read load footprint from file and do it asynchronously for not interrupting the therad
+            // TODO:: Read load footprint from file and do it asynchronously for not interrupting the therad. 0.01 is to avoid infeseability
             geometry_msgs::Polygon newfootprint;
             geometry_msgs::Point32 point_footprint;
-            point_footprint.x = -0.1; point_footprint.y =  0.36; point_footprint.z = 0.0;
+            point_footprint.x = -0.1+0.01; point_footprint.y =  0.36-0.01; point_footprint.z = 0.0;
             newfootprint.points.push_back(point_footprint);
-            point_footprint.x =  1.3; point_footprint.y =  0.36; point_footprint.z = 0.0;
+            point_footprint.x =  1.3-0.01; point_footprint.y =  0.36-0.01; point_footprint.z = 0.0;
             newfootprint.points.push_back(point_footprint);
-            point_footprint.x =  1.3; point_footprint.y = -0.36; point_footprint.z = 0.0;
+            point_footprint.x =  1.3-0.01; point_footprint.y = -0.36+0.01; point_footprint.z = 0.0;
             newfootprint.points.push_back(point_footprint);
-            point_footprint.x = -0.1; point_footprint.y = -0.36; point_footprint.z = 0.0;
+            point_footprint.x = -0.1+0.01; point_footprint.y = -0.36-0.01; point_footprint.z = 0.0;
             newfootprint.points.push_back(point_footprint);
             //reinit_localcostmap_footprint_sub.publish(newfootprint);
 //             system("rosrun dynamic_reconfigure dynparam set /maneuver_navigation/local_costmap footprint '[[-0.1, 0.36], [1.3, 0.36], [1.3, -0.36], [-0.1, -0.36]]'");            
@@ -122,16 +122,16 @@ int main(int argc, char** argv)
         if(reinit_planner_noload)
         {
             reinit_planner_noload = false;
-            // TODO:: Read load footprint from file and do it asynchronously for not interrupting the therad
+            // TODO:: Read load footprint from file and do it asynchronously for not interrupting the therad. 0.01 is to avoid infeseability
             geometry_msgs::Polygon newfootprint;
             geometry_msgs::Point32 point_footprint;
-            point_footprint.x = -0.36; point_footprint.y =  0.36; point_footprint.z = 0.0;
+            point_footprint.x = -0.36+0.01; point_footprint.y =  0.36-0.01; point_footprint.z = 0.0;
             newfootprint.points.push_back(point_footprint);
-            point_footprint.x =  0.36; point_footprint.y =  0.36; point_footprint.z = 0.0;
+            point_footprint.x =  0.36-0.01; point_footprint.y =  0.36-0.01; point_footprint.z = 0.0;
             newfootprint.points.push_back(point_footprint);
-            point_footprint.x =  0.36; point_footprint.y = -0.36; point_footprint.z = 0.0;
+            point_footprint.x =  0.36-0.01; point_footprint.y = -0.36+0.01; point_footprint.z = 0.0;
             newfootprint.points.push_back(point_footprint);
-            point_footprint.x = -0.36; point_footprint.y = -0.36; point_footprint.z = 0.0;
+            point_footprint.x = -0.36+0.01; point_footprint.y = -0.36+0.01; point_footprint.z = 0.0;
             newfootprint.points.push_back(point_footprint);
             //reinit_localcostmap_footprint_sub.publish(newfootprint);
 //             system("rosrun dynamic_reconfigure dynparam set /maneuver_navigation/local_costmap footprint '[[-0.1, 0.36], [1.3, 0.36], [1.3, -0.36], [-0.1, -0.36]]'");            

@@ -49,6 +49,9 @@ void ManeuverNavigation::init()
       exit(1);
     }    
     
+    nh_.getParam(blp_loader_.getName(local_planner_str)+"/xy_goal_tolerance", xy_goal_tolerance_);
+    nh_.getParam(blp_loader_.getName(local_planner_str)+"/yaw_goal_tolerance", yaw_goal_tolerance_);
+        
     
     local_nav_state_ = LOC_NAV_IDLE;
     manv_nav_state_  = MANV_NAV_IDLE;
@@ -66,8 +69,8 @@ void ManeuverNavigation::init()
 };
 
 void ManeuverNavigation::reinitPlanner(const geometry_msgs::Polygon& new_footprint) 
-{  
-    costmap_ros_->setUnpaddedRobotFootprintPolygon(new_footprint);
+{      
+    costmap_ros_->setUnpaddedRobotFootprintPolygon(new_footprint);   
     costmap_ros_->resetLayers();
     // initialize maneuver planner
     maneuver_planner = maneuver_planner::ManeuverPlanner("maneuver_planner",costmap_ros_);
@@ -216,12 +219,28 @@ void ManeuverNavigation::callLocalNavigationStateMachine()
             
             break;  
         case LOC_NAV_BUSY:  
+            if( getRobotPose(global_pose) )
+            {
+                tf::poseStampedTFToMsg(global_pose, feedback_pose); 
+                pub_navigation_fb_.publish(feedback_pose);
+            }
             
             if(local_planner_->isGoalReached())
             {
                 ROS_INFO("local planner, Goal reached!");
                 local_nav_state_ = LOC_NAV_IDLE;
-                manv_nav_state_   = MANV_NAV_IDLE;
+                tf::Stamped<tf::Pose> goal_pose;
+                tf::poseStampedMsgToTF(goal_,goal_pose);
+                tf::Pose diff_pose;
+                diff_pose = goal_pose.inverseTimes(global_pose);
+                double dist_to_goal = hypot(diff_pose.getOrigin().getX(), diff_pose.getOrigin().getY());
+                double diff_yaw =  tf::getYaw(diff_pose.getRotation()); //TODO: take numbers from paarmeter server
+                if(std::abs(dist_to_goal) > xy_goal_tolerance_ || std::abs(diff_yaw) > yaw_goal_tolerance_ ) 
+                     manv_nav_state_  = MANV_NAV_MAKE_INIT_PLAN; // replan maneuver
+                else
+                    manv_nav_state_   = MANV_NAV_IDLE;
+                
+                
             }
             else if(local_planner_->computeVelocityCommands(cmd_vel))
             {
@@ -238,11 +257,7 @@ void ManeuverNavigation::callLocalNavigationStateMachine()
 //                 manv_nav_state_   = MANV_NAV_MAKE_INIT_PLAN;
             }
             
-            if( getRobotPose(global_pose) )
-            {
-                tf::poseStampedTFToMsg(global_pose, feedback_pose); 
-                pub_navigation_fb_.publish(feedback_pose);
-            }
+            
                   
             
             break;

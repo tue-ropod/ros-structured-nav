@@ -18,8 +18,7 @@ find_package(catkin REQUIRED COMPONENTS
   maneuver_planner
   pluginlib
   nav_core
-  ed
-  maneuver_navigation
+  ed  
 )
 
 add_message_files(

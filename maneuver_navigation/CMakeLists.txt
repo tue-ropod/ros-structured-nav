@@ -24,9 +24,9 @@ find_package(catkin REQUIRED COMPONENTS
 add_message_files(
    DIRECTORY msg
    FILES
-   goal.msg
-   configuration.msg
-   feedback.msg
+   Goal.msg
+   Configuration.msg
+   Feedback.msg
 )
 
 ## Generate added messages and services with any dependencies listed here

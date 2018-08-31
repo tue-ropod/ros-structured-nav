@@ -203,6 +203,13 @@ void ManeuverNavigation::callLocalNavigationStateMachine()
     geometry_msgs::Twist cmd_vel;
     tf::Stamped<tf::Pose> global_pose;
     geometry_msgs::PoseStamped feedback_pose;    
+    
+    if( getRobotPose(global_pose) )
+    {
+        tf::poseStampedTFToMsg(global_pose, feedback_pose); 
+        pub_navigation_fb_.publish(feedback_pose);
+    }    
+    
     switch(local_nav_state_){
         case LOC_NAV_IDLE:
             break;                    
@@ -219,11 +226,6 @@ void ManeuverNavigation::callLocalNavigationStateMachine()
             
             break;  
         case LOC_NAV_BUSY:  
-            if( getRobotPose(global_pose) )
-            {
-                tf::poseStampedTFToMsg(global_pose, feedback_pose); 
-                pub_navigation_fb_.publish(feedback_pose);
-            }
             
             if(local_planner_->isGoalReached())
             {

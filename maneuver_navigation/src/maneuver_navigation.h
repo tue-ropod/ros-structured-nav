@@ -52,14 +52,9 @@ public:
     ~ManeuverNavigation();
 
     void init();
-//     void pauseNavigation();
-//     void resumeNavigation();
-//     void stopNavigation();
-//     bool isPositionValid();    
-//     bool isGoalReached();
     void reinitPlanner(const geometry_msgs::Polygon& new_footprint);
     bool isGoalReachable();
-//     bool executeCycle();
+    void cancel() ;
     void publishZeroVelocity();
     
     double footprintCost(double x_i, double y_i, double theta_i);

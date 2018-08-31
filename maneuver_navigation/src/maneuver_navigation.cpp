@@ -108,6 +108,15 @@ bool ManeuverNavigation:: gotoGoal(const geometry_msgs::PoseStamped& goal)
 
 };
 
+void ManeuverNavigation:: cancel() 
+{    
+   publishZeroVelocity();        
+   local_nav_state_ = LOC_NAV_IDLE;
+   manv_nav_state_   = MANV_NAV_IDLE;
+   return;
+
+};
+
 bool ManeuverNavigation::isGoalReachable() 
 {
     return true; // TODO: implement

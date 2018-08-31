@@ -28,6 +28,12 @@ void goalCallback(const geometry_msgs::PoseStamped::ConstPtr& goal_msg)
     goal = *goal_msg;
     goal_received = true;
 }
+bool cancel_nav = false;
+void cancelCallback(const std_msgs::Bool::ConstPtr& cancel_msg)
+{
+    ROS_INFO("Request to cancel navigation");
+    cancel_nav = cancel_msg->data;
+}
 
 bool reinit_planner_withload = false;
 bool reinit_planner_noload = false;
@@ -57,6 +63,7 @@ int main(int argc, char** argv)
     local_navigation_period = 1.0/local_navigation_rate;
     
     ros::Subscriber goal_cmd_sub = n.subscribe<geometry_msgs::PoseStamped>("/route_navigation/goal", 10, goalCallback);
+    ros::Subscriber cancel_cmd_sub = n.subscribe<std_msgs::Bool>("/route_navigation/cancel", 10, cancelCallback);
     ros::Subscriber reinit_planner_sub = n.subscribe<std_msgs::Bool>("/route_navigation/load_attached", 10, loadAttachedCallback);
    // ros::Publisher  reinit_localcostmap_footprint_sub = n.advertise<geometry_msgs::Polygon>("/maneuver_navigation/local_costmap/footprint", 1);
         
@@ -145,6 +152,12 @@ int main(int argc, char** argv)
             system("rosparam load ~/ropod-project-software/catkin_workspace/src/applications/ropod_navigation_test/config/parameters/teb_local_planner_params_ropod.yaml maneuver_navigation");
             maneuver_navigator.reinitPlanner(newfootprint);  // Dynamic reconfigurationdid not work so we had to do it in two ways. The localcostmap
             // was updated directly with functins, and the tebplanner by setting firts the parameters and then reloading the planner            
+        }
+        
+        if(cancel_nav)
+        {
+            cancel_nav = false;
+            maneuver_navigator.cancel();
         }
 
         ros::spinOnce();

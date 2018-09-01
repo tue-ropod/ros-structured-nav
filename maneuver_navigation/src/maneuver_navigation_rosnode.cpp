@@ -20,14 +20,23 @@
 
 
 // std::vector<geometry_msgs::PoseStamped> global_path;
+bool simple_goal_received = false;
+geometry_msgs::PoseStamped simple_goal;
+void simpleGoalCallback(const geometry_msgs::PoseStamped::ConstPtr& goal_msg)
+{
+    ROS_INFO("new simple goal received");
+    simple_goal = *goal_msg;
+    simple_goal_received = true;
+}
 bool goal_received = false;
-geometry_msgs::PoseStamped goal;
-void goalCallback(const geometry_msgs::PoseStamped::ConstPtr& goal_msg)
+maneuver_navigation::Goal goal;
+void goalCallback(const maneuver_navigation::Goal::ConstPtr& goal_msg)
 {
     ROS_INFO("new goal received");
     goal = *goal_msg;
     goal_received = true;
 }
+
 bool cancel_nav = false;
 void cancelCallback(const std_msgs::Bool::ConstPtr& cancel_msg)
 {
@@ -62,7 +71,8 @@ int main(int argc, char** argv)
     prediction_feasibility_check_period = 1.0/prediction_feasibility_check_rate;
     local_navigation_period = 1.0/local_navigation_rate;
     
-    ros::Subscriber goal_cmd_sub = n.subscribe<geometry_msgs::PoseStamped>("/route_navigation/simple_goal", 10, goalCallback);
+    ros::Subscriber goal_cmd_sub = n.subscribe<geometry_msgs::PoseStamped>("/route_navigation/simple_goal", 10, simpleGoalCallback);
+    ros::Subscriber mn_sendGoal_pub_ = n.subscribe<maneuver_navigation::Goal> ("/route_navigation/goal", 10,goalCallback);
     ros::Subscriber cancel_cmd_sub = n.subscribe<std_msgs::Bool>("/route_navigation/cancel", 10, cancelCallback);
     ros::Subscriber reinit_planner_sub = n.subscribe<std_msgs::Bool>("/route_navigation/load_attached", 10, loadAttachedCallback);
    // ros::Publisher  reinit_localcostmap_footprint_sub = n.advertise<geometry_msgs::Polygon>("/maneuver_navigation/local_costmap/footprint", 1);
@@ -83,12 +93,19 @@ int main(int argc, char** argv)
         // Execute local navigation
         maneuver_navigator.callLocalNavigationStateMachine();
         
+        if (simple_goal_received)
+        {
+            simple_goal_received = false;             
+            maneuver_navigator.gotoGoal(simple_goal);
+            prediction_feasibility_check_cycle_time = prediction_feasibility_check_period;
+        }   
+        
         if (goal_received)
         {
             goal_received = false;             
             maneuver_navigator.gotoGoal(goal);
             prediction_feasibility_check_cycle_time = prediction_feasibility_check_period;
-        }   
+        }          
         
         // Execute route navigation
         if( prediction_feasibility_check_cycle_time > prediction_feasibility_check_period)
@@ -101,17 +118,17 @@ int main(int argc, char** argv)
         {
             reinit_planner_withload = false;
             // TODO:: Read load footprint from file and do it asynchronously for not interrupting the therad. 0.01 is to avoid infeseability
-            geometry_msgs::Polygon newfootprint;
+            geometry_msgs::Polygon new_footprint;
             geometry_msgs::Point32 point_footprint;
             point_footprint.x = -0.1+0.01; point_footprint.y =  0.36-0.01; point_footprint.z = 0.0;
-            newfootprint.points.push_back(point_footprint);
+            new_footprint.points.push_back(point_footprint);
             point_footprint.x =  1.3-0.01; point_footprint.y =  0.36-0.01; point_footprint.z = 0.0;
-            newfootprint.points.push_back(point_footprint);
+            new_footprint.points.push_back(point_footprint);
             point_footprint.x =  1.3-0.01; point_footprint.y = -0.36+0.01; point_footprint.z = 0.0;
-            newfootprint.points.push_back(point_footprint);
+            new_footprint.points.push_back(point_footprint);
             point_footprint.x = -0.1+0.01; point_footprint.y = -0.36-0.01; point_footprint.z = 0.0;
-            newfootprint.points.push_back(point_footprint);
-            //reinit_localcostmap_footprint_sub.publish(newfootprint);
+            new_footprint.points.push_back(point_footprint);
+            //reinit_localcostmap_footprint_sub.publish(new_footprint);
 //             system("rosrun dynamic_reconfigure dynparam set /maneuver_navigation/local_costmap footprint '[[-0.1, 0.36], [1.3, 0.36], [1.3, -0.36], [-0.1, -0.36]]'");            
             
 //             system("rosparam set /maneuver_navigation/TebLocalPlannerROS/footprint_model/vertices '[[-0.1, 0.36], [1.3, 0.36], [1.3, -0.36], [-0.1, -0.36]]'");
@@ -121,7 +138,7 @@ int main(int argc, char** argv)
 //             system("rosparam set /maneuver_navigation/TebLocalPlannerROS/yaw_goal_tolerance 0.05");
             system("rosparam load ~/ropod-project-software/catkin_workspace/src/applications/ropod_navigation_test/config/parameters/teb_local_planner_params.yaml maneuver_navigation");
 
-            maneuver_navigator.reinitPlanner(newfootprint);  // Dynamic reconfigurationdid not work so we had to do it in two ways. The localcostmap
+            maneuver_navigator.reinitPlanner(new_footprint);  // Dynamic reconfigurationdid not work so we had to do it in two ways. The localcostmap
             // was updated directly with functins, and the tebplanner by setting firts the parameters and then reloading the planner
 
         }           
@@ -130,17 +147,17 @@ int main(int argc, char** argv)
         {
             reinit_planner_noload = false;
             // TODO:: Read load footprint from file and do it asynchronously for not interrupting the therad. 0.01 is to avoid infeseability
-            geometry_msgs::Polygon newfootprint;
+            geometry_msgs::Polygon new_footprint;
             geometry_msgs::Point32 point_footprint;
             point_footprint.x = -0.36+0.01; point_footprint.y =  0.36-0.01; point_footprint.z = 0.0;
-            newfootprint.points.push_back(point_footprint);
+            new_footprint.points.push_back(point_footprint);
             point_footprint.x =  0.36-0.01; point_footprint.y =  0.36-0.01; point_footprint.z = 0.0;
-            newfootprint.points.push_back(point_footprint);
+            new_footprint.points.push_back(point_footprint);
             point_footprint.x =  0.36-0.01; point_footprint.y = -0.36+0.01; point_footprint.z = 0.0;
-            newfootprint.points.push_back(point_footprint);
+            new_footprint.points.push_back(point_footprint);
             point_footprint.x = -0.36+0.01; point_footprint.y = -0.36+0.01; point_footprint.z = 0.0;
-            newfootprint.points.push_back(point_footprint);
-            //reinit_localcostmap_footprint_sub.publish(newfootprint);
+            new_footprint.points.push_back(point_footprint);
+            //reinit_localcostmap_footprint_sub.publish(new_footprint);
 //             system("rosrun dynamic_reconfigure dynparam set /maneuver_navigation/local_costmap footprint '[[-0.1, 0.36], [1.3, 0.36], [1.3, -0.36], [-0.1, -0.36]]'");            
             
 //             system("rosparam set /maneuver_navigation/TebLocalPlannerROS/footprint_model/vertices '[[-0.36, 0.36], [0.36, 0.36], [0.36, -0.36], [-0.36, -0.36]]'");
@@ -150,7 +167,7 @@ int main(int argc, char** argv)
 //             system("rosparam set /maneuver_navigation/TebLocalPlannerROS/yaw_goal_tolerance 0.05");
 
             system("rosparam load ~/ropod-project-software/catkin_workspace/src/applications/ropod_navigation_test/config/parameters/teb_local_planner_params_ropod.yaml maneuver_navigation");
-            maneuver_navigator.reinitPlanner(newfootprint);  // Dynamic reconfigurationdid not work so we had to do it in two ways. The localcostmap
+            maneuver_navigator.reinitPlanner(new_footprint);  // Dynamic reconfigurationdid not work so we had to do it in two ways. The localcostmap
             // was updated directly with functins, and the tebplanner by setting firts the parameters and then reloading the planner            
         }
         

@@ -102,6 +102,17 @@ void ManeuverNavigation::reinitPlanner(const geometry_msgs::Polygon& new_footpri
 bool ManeuverNavigation:: gotoGoal(const geometry_msgs::PoseStamped& goal) 
 {    
     goal_ = goal;
+    simple_goal_received_ = true;
+    manv_nav_state_ = MANV_NAV_MAKE_INIT_PLAN;    
+    local_nav_state_ = LOC_NAV_IDLE;
+    return true; // TODO: implement
+
+};
+
+bool ManeuverNavigation:: gotoGoal(const maneuver_navigation::Goal& goal) 
+{        
+    mn_goal_ = goal;
+    simple_goal_received_ = false;
     manv_nav_state_ = MANV_NAV_MAKE_INIT_PLAN;    
     local_nav_state_ = LOC_NAV_IDLE;
     return true; // TODO: implement
@@ -303,11 +314,17 @@ void ManeuverNavigation::callManeuverNavigationStateMachine()
         case MANV_NAV_IDLE:
             break;          
         case MANV_NAV_MAKE_INIT_PLAN:                            
-            
-            if( !getRobotPose(global_pose) )
-                break;
-            
-            tf::poseStampedTFToMsg(global_pose, start);            
+            if( simple_goal_received_ )
+            {
+                if( !getRobotPose(global_pose) )
+                    break;            
+                tf::poseStampedTFToMsg(global_pose, start);            
+            }
+            else
+            {
+                goal_ = mn_goal_.goal;
+                start = mn_goal_.start;
+            }
             goal_free_ = maneuver_planner.makePlan(start,goal_, plan, dist_before_obs);            
             ROS_INFO("dist_before_obs: %f", dist_before_obs);
             if( dist_before_obs > MAX_AHEAD_DIST_BEFORE_REPLANNING || goal_free_ == true)

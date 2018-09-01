@@ -16,10 +16,11 @@
 
 // Global planner includes
 #include <maneuver_planner/maneuver_planner.h>
+#include <maneuver_navigation/Goal.h>
+#include <maneuver_navigation/Feedback.h>
+#include <maneuver_navigation/Configuration.h>
 
-// Local planner includes
-// #include <base_local_planner/trajectory_planner_ros.h>
-// #include <teb_local_planner/teb_local_planner_ros.h>
+
 
 #include <nav_core/base_local_planner.h>
 #include <pluginlib/class_loader.h>
@@ -60,6 +61,7 @@ public:
     double footprintCost(double x_i, double y_i, double theta_i);
     bool   checkFootprintOnGlobalPlan(const std::vector<geometry_msgs::PoseStamped>& plan, const double& max_ahead_dist, double& dist_before_obs);
     bool gotoGoal(const geometry_msgs::PoseStamped& goal);
+    bool gotoGoal(const maneuver_navigation::Goal& goal);
     void callLocalNavigationStateMachine();
     void callManeuverNavigationStateMachine();
     
@@ -78,8 +80,10 @@ private:
    double REPLANNING_HYSTERESIS_DISTANCE;       // TODO: make static const?
    bool initialized_;
    bool goal_free_;
-   tf::TransformListener& tf_;
+   bool simple_goal_received_;
+   tf::TransformListener& tf_;   
    geometry_msgs::PoseStamped goal_;
+   maneuver_navigation::Goal mn_goal_;
    int local_nav_state_, manv_nav_state_;
    int local_nav_next_state_, manv_nav_next_state_;      
    int local_plan_infeasible_, local_plan_infeasible_cnt_;

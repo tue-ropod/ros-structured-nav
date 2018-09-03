@@ -74,7 +74,7 @@ int main(int argc, char** argv)
     ros::Subscriber goal_cmd_sub = n.subscribe<geometry_msgs::PoseStamped>("/route_navigation/simple_goal", 10, simpleGoalCallback);
     ros::Subscriber mn_sendGoal_pub_ = n.subscribe<maneuver_navigation::Goal> ("/route_navigation/goal", 10,goalCallback);
     ros::Subscriber cancel_cmd_sub = n.subscribe<std_msgs::Bool>("/route_navigation/cancel", 10, cancelCallback);
-    ros::Subscriber reinit_planner_sub = n.subscribe<std_msgs::Bool>("/route_navigation/load_attached", 10, loadAttachedCallback);
+    ros::Subscriber reinit_planner_sub = n.subscribe<std_msgs::Bool>("/route_navigation/set_load_attached", 10, loadAttachedCallback);
    // ros::Publisher  reinit_localcostmap_footprint_sub = n.advertise<geometry_msgs::Polygon>("/maneuver_navigation/local_costmap/footprint", 1);
         
 //     /move_base_simple/goal

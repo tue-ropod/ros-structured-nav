@@ -53,6 +53,9 @@ void ManeuverNavigation::init()
     nh_.getParam(blp_loader_.getName(local_planner_str)+"/yaw_goal_tolerance", yaw_goal_tolerance_);
         
     
+    mn_goal_.conf.precise_goal = true;
+    mn_goal_.conf.use_line_planner = true;
+    
     local_nav_state_ = LOC_NAV_IDLE;
     manv_nav_state_  = MANV_NAV_IDLE;
     
@@ -86,6 +89,13 @@ void ManeuverNavigation::reinitPlanner(const geometry_msgs::Polygon& new_footpri
         ROS_FATAL("Failed to create the local planner");
       exit(1);
     } 
+    
+    nh_.getParam(blp_loader_.getName(local_planner_str)+"/xy_goal_tolerance", xy_goal_tolerance_);
+    nh_.getParam(blp_loader_.getName(local_planner_str)+"/yaw_goal_tolerance", yaw_goal_tolerance_);
+    
+    mn_goal_.conf.precise_goal = true;
+    mn_goal_.conf.use_line_planner = true;    
+
 }
 
   void ManeuverNavigation::publishZeroVelocity(){
@@ -102,7 +112,9 @@ void ManeuverNavigation::reinitPlanner(const geometry_msgs::Polygon& new_footpri
 bool ManeuverNavigation:: gotoGoal(const geometry_msgs::PoseStamped& goal) 
 {    
     goal_ = goal;
-    simple_goal_received_ = true;
+    simple_goal_ = true;
+    mn_goal_.conf.precise_goal = true;
+    mn_goal_.conf.use_line_planner = true;
     manv_nav_state_ = MANV_NAV_MAKE_INIT_PLAN;    
     local_nav_state_ = LOC_NAV_IDLE;
     return true; // TODO: implement
@@ -112,7 +124,7 @@ bool ManeuverNavigation:: gotoGoal(const geometry_msgs::PoseStamped& goal)
 bool ManeuverNavigation:: gotoGoal(const maneuver_navigation::Goal& goal) 
 {        
     mn_goal_ = goal;
-    simple_goal_received_ = false;
+    simple_goal_ = false;
     manv_nav_state_ = MANV_NAV_MAKE_INIT_PLAN;    
     local_nav_state_ = LOC_NAV_IDLE;
     return true; // TODO: implement
@@ -256,9 +268,10 @@ void ManeuverNavigation::callLocalNavigationStateMachine()
                 tf::Pose diff_pose;
                 diff_pose = goal_pose.inverseTimes(global_pose);
                 double dist_to_goal = hypot(diff_pose.getOrigin().getX(), diff_pose.getOrigin().getY());
-                double diff_yaw =  tf::getYaw(diff_pose.getRotation()); //TODO: take numbers from paarmeter server
-                if(std::abs(dist_to_goal) > xy_goal_tolerance_ || std::abs(diff_yaw) > yaw_goal_tolerance_ ) 
-                     manv_nav_state_  = MANV_NAV_MAKE_INIT_PLAN; // replan maneuver
+                double diff_yaw =  tf::getYaw(diff_pose.getRotation()); 
+                
+                if( mn_goal_.conf.precise_goal && ( std::abs(dist_to_goal) > xy_goal_tolerance_ || std::abs(diff_yaw) > yaw_goal_tolerance_ ) ) 
+                     manv_nav_state_  = MANV_NAV_MAKE_INIT_PLAN; // replan maneuver until tolerances are met
                 else
                     manv_nav_state_   = MANV_NAV_IDLE;
                 
@@ -278,7 +291,6 @@ void ManeuverNavigation::callLocalNavigationStateMachine()
 //                 local_nav_state_ = LOC_NAV_IDLE;
 //                 manv_nav_state_   = MANV_NAV_MAKE_INIT_PLAN;
             }
-            
             
                   
             
@@ -314,7 +326,7 @@ void ManeuverNavigation::callManeuverNavigationStateMachine()
         case MANV_NAV_IDLE:
             break;          
         case MANV_NAV_MAKE_INIT_PLAN:                            
-            if( simple_goal_received_ )
+            if( simple_goal_ )
             {
                 if( !getRobotPose(global_pose) )
                     break;            
@@ -329,6 +341,7 @@ void ManeuverNavigation::callManeuverNavigationStateMachine()
             ROS_INFO("dist_before_obs: %f", dist_before_obs);
             if( dist_before_obs > MAX_AHEAD_DIST_BEFORE_REPLANNING || goal_free_ == true)
             {
+                simple_goal_ = true; // the structured goal is only the first time is received and succesful
                 local_nav_state_ = LOC_NAV_SET_PLAN;
                 manv_nav_state_  = MANV_NAV_BUSY;
             }
@@ -360,7 +373,7 @@ void ManeuverNavigation::callManeuverNavigationStateMachine()
                     ROS_INFO("No replan possible. Stop, inform and continue trrying");
                     publishZeroVelocity();        
                    // local_nav_state_ = LOC_NAV_IDLE;
-                    manv_nav_state_   = MANV_NAV_MAKE_INIT_PLAN;
+                   // manv_nav_state_   = MANV_NAV_MAKE_INIT_PLAN;
                 }                                 
              }
              

@@ -80,7 +80,7 @@ private:
    double REPLANNING_HYSTERESIS_DISTANCE;       // TODO: make static const?
    bool initialized_;
    bool goal_free_;
-   bool simple_goal_received_;
+   bool simple_goal_;
    tf::TransformListener& tf_;   
    geometry_msgs::PoseStamped goal_;
    maneuver_navigation::Goal mn_goal_;

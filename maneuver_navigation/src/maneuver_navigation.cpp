@@ -204,7 +204,7 @@ bool ManeuverNavigation::checkFootprintOnGlobalPlan(const std::vector<geometry_m
     bool is_traj_free = true;
     tf::Stamped<tf::Pose> pose_from_plan;
     
-    for (i = index_pose; i < plan.size()-1; i++) 
+    for (i = index_pose; i < plan.size()-2; i++) 
     {
         dist_next_point = hypot(plan[i].pose.position.x-plan[i+1].pose.position.x,plan[i].pose.position.y-plan[i+1].pose.position.y);
         total_ahead_distance += dist_next_point;
@@ -365,7 +365,7 @@ void ManeuverNavigation::callManeuverNavigationStateMachine()
              if( !checkFootprintOnGlobalPlan(plan, MAX_AHEAD_DIST_BEFORE_REPLANNING, dist_before_obs) )
              {
                 ROS_INFO("Obstacle in front at %.2f m. Try to replan",dist_before_obs);
-                publishZeroVelocity();  // TODO: Do this smarter by decreasing speed while computing new path    
+                // publishZeroVelocity();  // TODO: Do this smarter by decreasing speed while computing new path    
                 if( !getRobotPose(global_pose) )
                     break;
                 

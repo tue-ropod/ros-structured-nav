@@ -113,7 +113,7 @@ bool ManeuverNavigation:: gotoGoal(const geometry_msgs::PoseStamped& goal)
 {    
     goal_ = goal;
     simple_goal_ = true;
-    mn_goal_.conf.precise_goal = true;
+    mn_goal_.conf.precise_goal = false;
     mn_goal_.conf.use_line_planner = true;
     manv_nav_state_ = MANV_NAV_MAKE_INIT_PLAN;    
     local_nav_state_ = LOC_NAV_IDLE;

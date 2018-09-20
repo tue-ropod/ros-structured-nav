@@ -341,13 +341,20 @@ void ManeuverNavigation::callManeuverNavigationStateMachine()
             ROS_INFO("dist_before_obs: %f", dist_before_obs);
             if( dist_before_obs > MAX_AHEAD_DIST_BEFORE_REPLANNING || goal_free_ == true)
             {
-                simple_goal_ = true; // the structured goal is only the first time is received and succesful
-                local_nav_state_ = LOC_NAV_SET_PLAN;
-                manv_nav_state_  = MANV_NAV_BUSY;
+                if( plan.size()>0 )
+                {
+                    simple_goal_ = true; // the structured goal is only the first time is received and succesful                
+                    local_nav_state_ = LOC_NAV_SET_PLAN;
+                    manv_nav_state_  = MANV_NAV_BUSY;
+                }
+                else
+                {
+                    ROS_ERROR("Empty plan");
+                }                    
             }
             else
             {
-                ROS_ERROR("maneuver_navigation cannot make a plan due to obstacles, inform and keep trying");
+                ROS_WARN("maneuver_navigation cannot make a plan due to obstacles, inform and keep trying");
                 publishZeroVelocity();  
               //  local_nav_state_ = LOC_NAV_IDLE;
                 // manv_nav_state_   = MANV_NAV_IDLE; 
@@ -365,8 +372,15 @@ void ManeuverNavigation::callManeuverNavigationStateMachine()
                 tf::poseStampedTFToMsg(global_pose, start);              
                 if( maneuver_planner.makePlan(start,goal_, plan) )
                 {
-                    local_nav_state_ = LOC_NAV_SET_PLAN;
-                    manv_nav_state_  = MANV_NAV_BUSY;
+                    if( plan.size()>0 )
+                    {
+                        local_nav_state_ = LOC_NAV_SET_PLAN;
+                        manv_nav_state_  = MANV_NAV_BUSY;                        
+                    }
+                    else
+                    {
+                        ROS_ERROR("Empty plan");
+                    }
                 }
                 else
                 {
@@ -386,8 +400,15 @@ void ManeuverNavigation::callManeuverNavigationStateMachine()
                 goal_free_ = maneuver_planner.makePlan(start,goal_, plan, dist_before_obs);            
                 if( dist_before_obs > MAX_AHEAD_DIST_BEFORE_REPLANNING )
                 {
-                    local_nav_state_ = LOC_NAV_SET_PLAN;
-                    manv_nav_state_  = MANV_NAV_BUSY;
+                    if( plan.size()>0 )
+                    {
+                        local_nav_state_ = LOC_NAV_SET_PLAN;
+                        manv_nav_state_  = MANV_NAV_BUSY;
+                    }
+                    else
+                    {
+                        ROS_ERROR("Empty plan");
+                    }                    
                 }              
              }
              

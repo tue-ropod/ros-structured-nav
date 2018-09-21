@@ -210,6 +210,13 @@ bool ManeuverNavigation::checkFootprintOnGlobalPlan(const std::vector<geometry_m
         total_ahead_distance += dist_next_point;
         if( total_ahead_distance < max_ahead_dist)
         {
+            if (plan[i+1].header.frame_id.empty()){
+                // Non valid plan
+                ROS_ERROR("NON VALID PLAN!!!");
+                is_traj_free = false;
+                dist_before_obs = total_ahead_distance;
+                
+            }
             tf::poseStampedMsgToTF(plan[i+1],pose_from_plan);             
             pose_from_plan.getBasis().getEulerYPR(yaw, pitch, roll);
             footprint_cost = footprintCost(pose_from_plan.getOrigin().getX(), pose_from_plan.getOrigin().getY(), yaw);

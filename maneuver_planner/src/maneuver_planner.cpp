@@ -1262,14 +1262,15 @@ bool ManeuverPlanner::makePlanUntilPossible(const geometry_msgs::PoseStamped& st
             refpoint_tf_robot_coord.stamp_ = goal_tf.stamp_;
             temp_quat.setRPY(0.0,0.0,0.0);
             refpoint_tf_robot_coord_vec.clear();
+                                
+            
+            temp_vector3 = tf::Vector3(topRightCorner_[0], topRightCorner_[1], 0.0);
+            refpoint_tf_robot_coord.setData(tf::Transform(temp_quat,temp_vector3));            
+            refpoint_tf_robot_coord_vec.push_back(refpoint_tf_robot_coord);        
             
             temp_vector3 = tf::Vector3(0.0, 0.0, 0.0);
             refpoint_tf_robot_coord.setData(tf::Transform(temp_quat,temp_vector3));
-            refpoint_tf_robot_coord_vec.push_back(refpoint_tf_robot_coord);            
-            
-            temp_vector3 = tf::Vector3(topRightCorner_[0], topRightCorner_[1], 0.0);
-            refpoint_tf_robot_coord.setData(tf::Transform(temp_quat,temp_vector3));
-            refpoint_tf_robot_coord_vec.push_back(refpoint_tf_robot_coord);            
+            refpoint_tf_robot_coord_vec.push_back(refpoint_tf_robot_coord);                
             
             temp_vector3 = tf::Vector3(left_side_ref_point_[0], left_side_ref_point_[1], 0.0);
             refpoint_tf_robot_coord.setData(tf::Transform(temp_quat,temp_vector3));

@@ -53,8 +53,8 @@ void ManeuverNavigation::init()
     nh_.getParam(blp_loader_.getName(local_planner_str)+"/yaw_goal_tolerance", yaw_goal_tolerance_);
         
     
-    mn_goal_.conf.precise_goal = true;
-    mn_goal_.conf.use_line_planner = true;
+    mn_goal_.conf.precise_goal = false;
+    mn_goal_.conf.use_line_planner = false;
     
     local_nav_state_ = LOC_NAV_IDLE;
     manv_nav_state_  = MANV_NAV_IDLE;
@@ -93,8 +93,8 @@ void ManeuverNavigation::reinitPlanner(const geometry_msgs::Polygon& new_footpri
     nh_.getParam(blp_loader_.getName(local_planner_str)+"/xy_goal_tolerance", xy_goal_tolerance_);
     nh_.getParam(blp_loader_.getName(local_planner_str)+"/yaw_goal_tolerance", yaw_goal_tolerance_);
     
-    mn_goal_.conf.precise_goal = true;
-    mn_goal_.conf.use_line_planner = true;    
+    mn_goal_.conf.precise_goal = false;
+    mn_goal_.conf.use_line_planner = false;    
 
 }
 
@@ -377,7 +377,8 @@ void ManeuverNavigation::callManeuverNavigationStateMachine()
                     break;
                 
                 tf::poseStampedTFToMsg(global_pose, start);              
-                if( maneuver_planner.makePlan(start,goal_, plan) )
+                goal_free_ = maneuver_planner.makePlan(start,goal_, plan);
+                if(goal_free_)
                 {
                     if( plan.size()>0 )
                     {
@@ -394,11 +395,10 @@ void ManeuverNavigation::callManeuverNavigationStateMachine()
                     ROS_INFO("No replan possible. Stop, inform and continue trrying");
                     publishZeroVelocity();        
                    // local_nav_state_ = LOC_NAV_IDLE;
-                   // manv_nav_state_   = MANV_NAV_MAKE_INIT_PLAN;
+                    manv_nav_state_   = MANV_NAV_MAKE_INIT_PLAN;
                 }                                 
              }
-             
-             if (goal_free_ == false && dist_before_obs < (MAX_AHEAD_DIST_BEFORE_REPLANNING+REPLANNING_HYSTERESIS_DISTANCE)) // When the goal was not free and we are close to end of temporary plan, replan
+             else if (goal_free_ == false && dist_before_obs < (MAX_AHEAD_DIST_BEFORE_REPLANNING+REPLANNING_HYSTERESIS_DISTANCE)) // When the goal was not free and we are close to end of temporary plan, replan
              {
                 if( !getRobotPose(global_pose) )
                     break;

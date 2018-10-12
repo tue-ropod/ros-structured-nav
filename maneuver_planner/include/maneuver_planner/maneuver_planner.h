@@ -91,9 +91,8 @@ namespace maneuver_planner{
           const geometry_msgs::PoseStamped& goal, std::vector<geometry_msgs::PoseStamped>& plan);    
       bool makePlan(const geometry_msgs::PoseStamped& start, 
           const geometry_msgs::PoseStamped& goal, std::vector<geometry_msgs::PoseStamped>& plan, double & dist_without_obstacles);    
-
-    private:
       costmap_2d::Costmap2DROS* costmap_ros_;
+    private:
       double step_size_, min_dist_from_robot_;
       costmap_2d::Costmap2D* costmap_;
       base_local_planner::WorldModel* world_model_; ///< @brief The world model that the controller will use

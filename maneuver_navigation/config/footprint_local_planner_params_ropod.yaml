@@ -1,3 +1,6 @@
+local_costmap:
+  footprint: [[-0.33, 0.33], [0.33, 0.33], [0.33, -0.33], [-0.33, -0.33]] # for ropod alone
+
 TebLocalPlannerROS:
 
   odom_topic: /load/odom  # This parameters changes with respect to load. The broadcaster is incharge to make the right transformation

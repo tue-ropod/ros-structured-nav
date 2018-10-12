@@ -62,13 +62,21 @@ We make use of the [TEB Local planner](http://wiki.ros.org/teb_local_planner) to
 &nbsp;&nbsp;&nbsp;&nbsp;*bool precise_goal* :  use tight tolerances to reach a goal. If after a maneuver the goal is not reached, the goal is resent.
 
 ### 2.3 Parameters
-* **&#x223C;<name\>/default_ropod_navigation_param_file(string, default: "config/footprint_local_planer_params_ropod.yaml")**\
+#### 2.3.1 Manuever navigation
+* **&#x223C;<name\>/maneuver_navigation/default_ropod_navigation_param_file(string, default: "config/footprint_local_planer_params_ropod.yaml")**\
 Contains the default parameters of the robot's footprint and local planner that are used when the ropod *does not have* a load attached.
 
-* **&#x223C;<name\>/default_ropod_load_param_file(string, default: "config/footprint_local_planer_params_ropod_load.yaml")**\
+* **&#x223C;<name\>/maneuver_navigation/default_ropod_load_param_file(string, default: "config/footprint_local_planer_params_ropod_load.yaml")**\
 Contains the default parameters of the robot's footprint and local planner that are used when the ropod *have* a load attached.
 
-#### 2.3.1 Manuever planner
+* **&#x223C;<name\>/maneuver_navigation/local_navigation_rate (double, default: 10.0)**\
+Rate at which the local planner is run.
+
+* **&#x223C;<name\>/maneuver_navigation/prediction_feasibility_check_rate (double, default: 3.0)**\
+Rate at which the maneuver planner checks feasibility of the rest of the plan. When there are obstacles ahead, a new maneuver is planned.
+
+
+#### 2.3.2 Manuever planner
 * **&#x223C;<name\>/maneuver_planner/step_size (double, default: 0.05 (localcostmap default))**\
 Step size used to generate the reference point trajectories.
 
@@ -76,10 +84,11 @@ Step size used to generate the reference point trajectories.
 When true, the last received goal is stored and used as starting pose for maneuver planning.
 To be used only with with a simple_goal (see subscribed topics).
 
-#### 2.3.1 Manuever navigation
-#### 2.3.2 Local costmap
-We make use of the [Costmap 2D](http://wiki.ros.org/costmap_2d) as local costmap. . Please refer to their website for the corresponding parameters.
-#### 2.3.3 TEB local planner parameters
-We make use of the [TEB Local planner](http://wiki.ros.org/teb_local_planner) to execute the maneuver. Please refer to their website for the parameters.
-#### 2.3.4 Footprint
+#### 2.3.3 Footprint
 The robot footprint is defined in two places and it must be taken care of that they are identical. One is at the [Costmap 2D](http://wiki.ros.org/costmap_2d) parameters and the other is at the [TEB Local planner](http://wiki.ros.org/teb_local_planner) parameters.
+
+#### 2.3.4 Local costmap
+We make use of the [Costmap 2D](http://wiki.ros.org/costmap_2d) as local costmap. . Please refer to their website for the corresponding parameters.
+#### 2.3.5 TEB local planner parameters
+We make use of the [TEB Local planner](http://wiki.ros.org/teb_local_planner) to execute the maneuver. Please refer to their website for the parameters.
+

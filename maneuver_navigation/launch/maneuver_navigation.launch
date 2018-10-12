@@ -74,32 +74,17 @@
         <rosparam file="$(find ropod_navigation_test)/config/parameters/local_costmap_params.yaml"  command="load"/>    
         <rosparam file="$(find ropod_navigation_test)/config/parameters/base_local_planner_params.yaml" command="load" />
                     
-    </node>-->
-    
-<!--    <node name="maneuver_navigation" pkg="maneuver_navigation" type="maneuver_navigation" output="screen">
-     
-        <rosparam file="$(find ropod_navigation_test)/config/parameters/costmap_common_params.yaml" command="load" ns="global_costmap" />
-        <rosparam file="$(find ropod_navigation_test)/config/parameters/costmap_common_params.yaml" command="load" ns="local_costmap" />    
-        <rosparam file="$(find ropod_navigation_test)/config/parameters/footprint_ropod.yaml" command="load" ns="global_costmap" />
-        <rosparam file="$(find ropod_navigation_test)/config/parameters/footprint_ropod.yaml" command="load" ns="local_costmap" />       
-        <rosparam file="$(find ropod_navigation_test)/config/parameters/global_costmap_params.yaml" command="load" />
-        <rosparam file="$(find ropod_navigation_test)/config/parameters/local_costmap_params.yaml"  command="load"/>    
-        <rosparam file="$(find ropod_navigation_test)/config/parameters/base_local_planner_params.yaml" command="load" />     
-        
-        <remap from="/maneuver_navigation/cmd_vel" to="/ropod/cmd_vel"/>
-        <remap from="odom" to="/ropod/odom"/>
-        
     </node>-->    
     
     <node name="maneuver_navigation" pkg="maneuver_navigation" type="maneuver_navigation" output="screen">
      
-        <rosparam file="$(find ropod_navigation_test)/config/parameters/costmap_common_params.yaml" command="load" ns="global_costmap" />
         <rosparam file="$(find ropod_navigation_test)/config/parameters/costmap_common_params.yaml" command="load" ns="local_costmap" />    
-        <rosparam file="$(find ropod_navigation_test)/config/parameters/footprint_ropod_mobidik.yaml" command="load" ns="global_costmap" />
-        <rosparam file="$(find ropod_navigation_test)/config/parameters/footprint_ropod_mobidik.yaml" command="load" ns="local_costmap" />       
-        <rosparam file="$(find ropod_navigation_test)/config/parameters/global_costmap_params.yaml" command="load" />
+        <rosparam file="$(find ropod_navigation_test)/config/parameters/footprint_ropod.yaml" command="load" ns="local_costmap" />       
         <rosparam file="$(find ropod_navigation_test)/config/parameters/local_costmap_params.yaml"  command="load"/>    
-        <rosparam file="$(find ropod_navigation_test)/config/parameters/base_local_planner_params.yaml" command="load" />     
+        <rosparam file="$(find ropod_navigation_test)/config/parameters/teb_local_planner_params_ropod.yaml" command="load" />     
+        <param name="default_ropod_navigation_param_file" value ="$(find maneuver_navigation)/config/footprint_local_planner_params_ropod.yaml"/>
+        <param name="default_ropod_load_navigation_param_file" value ="$(find maneuver_navigation)/config/footprint_local_planner_params_ropod_load.yaml"/>
+        
         
         <remap from="/maneuver_navigation/cmd_vel" to="/load/cmd_vel"/>
         <remap from="odom" to="/load/odom"/>

@@ -37,8 +37,9 @@ void ManeuverNavigation::init()
 //     }
     
     //create a local planner
-    std::string local_planner_str;
-    nh_.param("base_local_planner", local_planner_str, std::string("base_local_planner/TrajectoryPlannerROS"));
+//     nh_.param("base_local_planner", local_planner_str, std::string("base_local_planner/TrajectoryPlannerROS"));
+    std::string local_planner_str;    
+    nh_.param("base_local_planner", local_planner_str, std::string("teb_local_planner/TebLocalPlannerROS"));
     try {      
       local_planner_ = blp_loader_.createInstance(local_planner_str);
       //ROS_INFO("Created local_planner %s", local_planner_str.c_str());
@@ -79,7 +80,8 @@ void ManeuverNavigation::reinitPlanner(const geometry_msgs::Polygon& new_footpri
     maneuver_planner = maneuver_planner::ManeuverPlanner("maneuver_planner",costmap_ros_);
     // Initializelocal planner
     std::string local_planner_str;
-    nh_.param("base_local_planner", local_planner_str, std::string("base_local_planner/TrajectoryPlannerROS"));
+//     nh_.param("base_local_planner", local_planner_str, std::string("base_local_planner/TrajectoryPlannerROS"));
+    nh_.param("base_local_planner", local_planner_str, std::string("teb_local_planner/TebLocalPlannerROS"));
     local_planner_.reset();    
     try {      
       local_planner_ = blp_loader_.createInstance(local_planner_str);

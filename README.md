@@ -5,7 +5,9 @@ The maneuver-based navigation aims to provide a simple yet efficient of motion p
 
 To navigate to a desired goal in the vicinity of the robot, it is desirable to perform a limited set of movements or maneuvers that eventually can help people in the proximity of the robot to predict its behavior. The maneuvers should also take into account over-sized dimensions of robots carrying a load. To meet those requirements, we propose first a basic set of three maneuvers, move straight, turn left in an intersection and turn right in an intersection. An illustration of the turn left-right maneuvers is shown in the Figure below.
 
-![ "Maneuver Concept"](docs/images/basic_maneuvers.png  "Maneuver Concept")
+<p align="center">
+  <img src="docs/images/basic_maneuvers.png?raw=true" alt="Maneuver Concept" width="800"/>
+</p>
 
 We start by defining a trajectory composed by straight-lines and circles, other choices like clothoids or bezier-curves are also possible. Next, such trajectory is assigned to a reference point on the robot footprint. For instance for the left-turn maneuver, such point is placed at the top-right corner of the footprint. The motivation is that we are interested in keeping such point parallel to the wall of the corridor we will enter. For the right-turn maneuver, we placed the point on the right hand side of the vehicle, as to keep that side away from the corner. This strategy allows the robot to find a wall-collision-free trajectory for turning in intersections.
 
@@ -13,8 +15,9 @@ We have parametrized the trajectories in order to explore several possibilities,
 
 We can the compose several of these basic maneuvers to for instance create change of lane, or overtake maneuvers to avoid obstacles. Once again, the maneuvers can be parametrized in order to explore the free space. An example of an overtake maneuver is shown in the Figure below.
 
-![ "Overtake Maneuver"](docs/images/overtake_maneuver.png  "Overtake Maneuver")
-
+<p align="center">
+  <img src="docs/images/overtake_maneuver.png?raw=true" alt="Overtake Maneuver" width="250"/>
+</p>
 
 ## 2. Node API
 
@@ -39,7 +42,7 @@ We can the compose several of these basic maneuvers to for instance create chang
 **&#x223C;<name\>/route_navigation/cancel(std_msgs/Bool)**\
 &nbsp;&nbsp;&nbsp;&nbsp; Set to true to cancel the current navigation. A zero velocity command is sent as well.
 
-**&#x223C;<name\>/route_navigation/set_load_attached(std_msgs/Bool)**
+**&#x223C;<name\>/route_navigation/set_load_attached(std_msgs/Bool)**\
 &nbsp;&nbsp;&nbsp;&nbsp; When set to true, the navigation is reset and the parameters specified in the file indicated by\
 &nbsp;&nbsp;&nbsp;&nbsp; &#x223C;<name\>/default_ropod_load_param_file are loaded. When is set to false, the parameters\
 &nbsp;&nbsp;&nbsp;&nbsp; in the file indicated by  &#x223C;<name\>/default_ropod_navigation_param_file are loaded.\

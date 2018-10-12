@@ -58,10 +58,10 @@ We make use of the [TEB Local planner](http://wiki.ros.org/teb_local_planner) to
 
 ### 2.2 Message types
 **/route_navigation/goal**\
-*geometry_msgs/PoseStamped start *: start pose of plan.\
+*geometry_msgs/PoseStamped start* : start pose of plan.\
 *geometry_msgs/PoseStamped goal* : goal pose of plan.\
 *Configuration conf*\
-&nbsp;&nbsp;&nbsp;&nbsp;*bool use_line_planner *: whether or not plan straight line trajectories, useful for holonomic robots.\
+&nbsp;&nbsp;&nbsp;&nbsp;*bool use_line_planner* : whether or not plan straight line trajectories, useful for holonomic robots.\
 &nbsp;&nbsp;&nbsp;&nbsp;*bool precise_goal* :  use tight tolerances to reach a goal. If after a maneuver the goal is not reached, the goal is resent.
 
 ### 2.3 Parameters

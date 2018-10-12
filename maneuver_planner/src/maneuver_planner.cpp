@@ -61,8 +61,6 @@ void ManeuverPlanner::initialize(std::string name, costmap_2d::Costmap2DROS* cos
 
         ros::NodeHandle private_nh("~/" + name);
         private_nh.param("step_size", step_size_, costmap_->getResolution());
-        private_nh.param("min_dist_from_robot", min_dist_from_robot_, 0.10);
-        private_nh.param("turning_radius", turning_radius_, 0.8);
         private_nh.param("use_last_goal_as_start", last_goal_as_start_, false);
         valid_last_goal_ = false;
         world_model_ = new base_local_planner::CostmapModel(*costmap_);

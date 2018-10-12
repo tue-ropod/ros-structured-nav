@@ -134,11 +134,6 @@ int main(int argc, char** argv)
             //reinit_localcostmap_footprint_sub.publish(new_footprint);
 //             system("rosrun dynamic_reconfigure dynparam set /maneuver_navigation/local_costmap footprint '[[-0.1, 0.36], [1.3, 0.36], [1.3, -0.36], [-0.1, -0.36]]' &");
             
-//             system("rosparam set /maneuver_navigation/TebLocalPlannerROS/footprint_model/vertices '[[-0.1, 0.36], [1.3, 0.36], [1.3, -0.36], [-0.1, -0.36]]'");
-//             system("rosparam set /maneuver_navigation/TebLocalPlannerROS/max_global_plan_lookahead_dist 1.0");
-//             system("rosparam set /maneuver_navigation/TebLocalPlannerROS/max_vel_x 1.0");
-//             system("rosparam set /maneuver_navigation/TebLocalPlannerROS/xy_goal_tolerance 0.2");
-//             system("rosparam set /maneuver_navigation/TebLocalPlannerROS/yaw_goal_tolerance 0.05");
             system("rosparam load ~/ropod-project-software/catkin_workspace/src/applications/ropod_navigation_test/config/parameters/teb_local_planner_params.yaml maneuver_navigation");
 
             maneuver_navigator.reinitPlanner(new_footprint);  // Dynamic reconfigurationdid not work so we had to do it in two ways. The localcostmap
@@ -163,11 +158,6 @@ int main(int argc, char** argv)
             //reinit_localcostmap_footprint_sub.publish(new_footprint);
 //             system("rosrun dynamic_reconfigure dynparam set /maneuver_navigation/local_costmap footprint '[[-0.1, 0.36], [1.3, 0.36], [1.3, -0.36], [-0.1, -0.36]]'");            
             
-//             system("rosparam set /maneuver_navigation/TebLocalPlannerROS/footprint_model/vertices '[[-0.36, 0.36], [0.36, 0.36], [0.36, -0.36], [-0.36, -0.36]]'");
-//             system("rosparam set /maneuver_navigation/TebLocalPlannerROS/max_global_plan_lookahead_dist 1.5");
-//             system("rosparam set /maneuver_navigation/TebLocalPlannerROS/max_vel_x 1.4");
-//             system("rosparam set /maneuver_navigation/TebLocalPlannerROS/xy_goal_tolerance 0.1");
-//             system("rosparam set /maneuver_navigation/TebLocalPlannerROS/yaw_goal_tolerance 0.05");
 
             system("rosparam load ~/ropod-project-software/catkin_workspace/src/applications/ropod_navigation_test/config/parameters/teb_local_planner_params_ropod.yaml maneuver_navigation");
             maneuver_navigator.reinitPlanner(new_footprint);  // Dynamic reconfigurationdid not work so we had to do it in two ways. The localcostmap

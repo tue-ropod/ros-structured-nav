@@ -59,7 +59,7 @@ public:
     void publishZeroVelocity();
     
     double footprintCost(double x_i, double y_i, double theta_i);
-    bool   checkFootprintOnGlobalPlan(const std::vector<geometry_msgs::PoseStamped>& plan, const double& max_ahead_dist, double& dist_before_obs);
+    bool   checkFootprintOnGlobalPlan(const std::vector<geometry_msgs::PoseStamped>& plan, const double& max_ahead_dist, double& dist_before_obs, int &index_closest_to_pose, int &index_before_obs);
     bool gotoGoal(const geometry_msgs::PoseStamped& goal);
     bool gotoGoal(const maneuver_navigation::Goal& goal);
     void callLocalNavigationStateMachine();
@@ -81,6 +81,7 @@ private:
    bool initialized_;
    bool goal_free_;
    bool simple_goal_;
+   bool append_new_maneuver_;
    tf::TransformListener& tf_;   
    geometry_msgs::PoseStamped goal_;
    maneuver_navigation::Goal mn_goal_;

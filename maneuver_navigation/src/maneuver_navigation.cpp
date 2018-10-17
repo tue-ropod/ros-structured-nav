@@ -62,7 +62,7 @@ void ManeuverNavigation::init()
     
     MAX_AHEAD_DIST_BEFORE_REPLANNING = 2.0;
     REPLANNING_HYSTERESIS_DISTANCE = 1.0;
-    goal_free_ =  false;
+    goal_free_ =  false;    
     
     vel_pub_ = nh_.advertise<geometry_msgs::Twist>("cmd_vel", 1);
     
@@ -115,6 +115,7 @@ bool ManeuverNavigation:: gotoGoal(const geometry_msgs::PoseStamped& goal)
 {    
     goal_ = goal;
     simple_goal_ = true;
+    append_new_maneuver_ = false;
     mn_goal_.conf.precise_goal = false;
     mn_goal_.conf.use_line_planner = true;
     manv_nav_state_ = MANV_NAV_MAKE_INIT_PLAN;    
@@ -127,6 +128,7 @@ bool ManeuverNavigation:: gotoGoal(const maneuver_navigation::Goal& goal)
 {        
     mn_goal_ = goal;
     simple_goal_ = false;
+    append_new_maneuver_ = true;
     manv_nav_state_ = MANV_NAV_MAKE_INIT_PLAN;    
     local_nav_state_ = LOC_NAV_IDLE;
     return true; // TODO: implement
@@ -170,7 +172,7 @@ double ManeuverNavigation::footprintCost(double x_i, double y_i, double theta_i)
 }
 
 
-bool ManeuverNavigation::checkFootprintOnGlobalPlan(const std::vector<geometry_msgs::PoseStamped>& plan, const double& max_ahead_dist, double& dist_before_obs)
+bool ManeuverNavigation::checkFootprintOnGlobalPlan(const std::vector<geometry_msgs::PoseStamped>& plan, const double& max_ahead_dist, double& dist_before_obs, int &index_closest_to_pose, int &index_before_obs )
 {
     tf::Stamped<tf::Pose> global_pose;
     dist_before_obs = 0.0;
@@ -201,6 +203,8 @@ bool ManeuverNavigation::checkFootprintOnGlobalPlan(const std::vector<geometry_m
     // Now start checking poses in the future up to the desired distance
     double total_ahead_distance = 0.0;
     dist_before_obs = max_ahead_dist;
+    index_closest_to_pose = index_pose;
+    index_before_obs = plan.size()-1;
     double dist_next_point;
     double footprint_cost;
     bool is_traj_free = true;
@@ -227,6 +231,7 @@ bool ManeuverNavigation::checkFootprintOnGlobalPlan(const std::vector<geometry_m
                 ROS_INFO("footprint_cost %f",footprint_cost);
                 is_traj_free = false;
                 dist_before_obs = total_ahead_distance;
+                index_before_obs = i;
                 break;
             }
         }
@@ -327,6 +332,9 @@ bool ManeuverNavigation::getRobotPose(tf::Stamped<tf::Pose> & global_pose)
 void ManeuverNavigation::callManeuverNavigationStateMachine() 
 {
     double dist_before_obs;  
+    int index_closest_to_pose;
+    int index_before_obs;
+    std::vector<geometry_msgs::PoseStamped> old_plan;  
     
     tf::Stamped<tf::Pose> global_pose;
     geometry_msgs::PoseStamped start;    
@@ -346,7 +354,20 @@ void ManeuverNavigation::callManeuverNavigationStateMachine()
                 goal_ = mn_goal_.goal;
                 start = mn_goal_.start;
             }
-            goal_free_ = maneuver_planner.makePlan(start,goal_, plan, dist_before_obs);            
+            if(append_new_maneuver_)
+            {
+                // Find first current position on plan and then move certain disctance ahead to make the plan.
+                checkFootprintOnGlobalPlan(plan, MAX_AHEAD_DIST_BEFORE_REPLANNING, dist_before_obs, index_closest_to_pose, index_before_obs);
+                old_plan.clear();
+                old_plan.insert(old_plan.begin(), plan.begin()+index_closest_to_pose, plan.begin()+index_before_obs);
+                start.pose.position = plan[index_before_obs].pose.position;
+                goal_free_ = maneuver_planner.makePlan(start,goal_, plan, dist_before_obs);
+                plan.insert(plan.begin(),old_plan.begin(), old_plan.end());
+            }
+            else
+            {
+                goal_free_ = maneuver_planner.makePlan(start,goal_, plan, dist_before_obs);            
+            }
             ROS_INFO("dist_before_obs: %f", dist_before_obs);
             if( dist_before_obs > MAX_AHEAD_DIST_BEFORE_REPLANNING || goal_free_ == true)
             {
@@ -371,7 +392,7 @@ void ManeuverNavigation::callManeuverNavigationStateMachine()
             
             break;
          case MANV_NAV_BUSY:
-             if( !checkFootprintOnGlobalPlan(plan, MAX_AHEAD_DIST_BEFORE_REPLANNING, dist_before_obs) )
+             if( !checkFootprintOnGlobalPlan(plan, MAX_AHEAD_DIST_BEFORE_REPLANNING, dist_before_obs, index_closest_to_pose, index_before_obs) )
              {
                 ROS_INFO("Obstacle in front at %.2f m. Try to replan",dist_before_obs);
                 // publishZeroVelocity();  // TODO: Do this smarter by decreasing speed while computing new path    

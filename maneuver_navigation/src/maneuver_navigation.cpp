@@ -354,7 +354,7 @@ void ManeuverNavigation::callManeuverNavigationStateMachine()
                 goal_ = mn_goal_.goal;
                 start = mn_goal_.start;
             }
-            if(append_new_maneuver_)
+            if(append_new_maneuver_ && plan.size()>0)
             {
                 // Find first current position on plan and then move certain disctance ahead to make the plan.
                 checkFootprintOnGlobalPlan(plan, MAX_AHEAD_DIST_BEFORE_REPLANNING, dist_before_obs, index_closest_to_pose, index_before_obs);

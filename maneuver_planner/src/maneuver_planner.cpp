@@ -679,7 +679,7 @@ bool ManeuverPlanner::searchTrajectoryOvertakeManeuver(const tf::Stamped<tf::Pos
     
     goal_tf.getBasis().getEulerYPR(goal_yaw, temp_pitch, temp_roll);     
     
-    start_yaw = goal_yaw; // With this we just compute the intermediate point with same angle as the goal_yaw. This works better in corridors.
+    //start_yaw = goal_yaw; // With this we just compute the intermediate point with same angle as the goal_yaw. This works better in corridors.
 
 
     // Compute reference start and reference goal on global coordinates
@@ -718,10 +718,10 @@ bool ManeuverPlanner::searchTrajectoryOvertakeManeuver(const tf::Stamped<tf::Pos
 
     double midway_side_ovt;
         
-    //midway_side_ovt_search_.resetLinearSearch(midway_side_ovt_search_.lin_search_min_, midway_side_ovt_search_.lin_search_max_);
-        midway_side_ovt_search_.resetMidSearch(midway_side_ovt_search_.lin_search_min_, midway_side_ovt_search_.lin_search_max_);
+    midway_side_ovt_search_.resetLinearSearch(midway_side_ovt_search_.lin_search_min_, midway_side_ovt_search_.lin_search_max_);
+//         midway_side_ovt_search_.resetMidSearch(midway_side_ovt_search_.lin_search_min_, midway_side_ovt_search_.lin_search_max_);
 
-    while( midway_side_ovt_search_.midSearch(midway_side_ovt) & !maneuver_traj_succesful){         
+    while( midway_side_ovt_search_.linearSearch(midway_side_ovt) & !maneuver_traj_succesful){         
                 
         // refpoint_goal_tf_refstart_coord.getOrigin().getX()*0.5
         temp_vector3 = tf::Vector3( refpoint_goal_tf_refstart_coord.getOrigin().getX()*0.3 + refpoint_tf_robot_coord.getOrigin().getX(), midway_side_ovt + refpoint_goal_tf_refstart_coord.getOrigin().getY(), 0.0);    
@@ -1348,7 +1348,8 @@ bool ManeuverPlanner::makePlanUntilPossible(const geometry_msgs::PoseStamped& st
                 refpoint_tf_robot_coord.stamp_ = goal_tf.stamp_;
                 temp_quat.setRPY(0.0,0.0,0.0);
 
-                temp_vector3 = tf::Vector3(topRightCorner_[0], topRightCorner_[1], 0.0);
+//                 temp_vector3 = tf::Vector3(topRightCorner_[0], topRightCorner_[1], 0.0);
+                temp_vector3 = tf::Vector3(0.0, 0.0, 0.0);
                 refpoint_tf_robot_coord.setData(tf::Transform(temp_quat,temp_vector3));         
                 plan.clear();
                 maneuver_traj_succesful = searchTrajectoryOvertakeManeuver(start_tf, goal_tf, refpoint_tf_robot_coord, plan, dist_without_obstacles);        

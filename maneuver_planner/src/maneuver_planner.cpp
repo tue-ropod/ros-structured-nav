@@ -478,7 +478,6 @@ bool ManeuverPlanner::checkFootprintTransformLocalToGlobal(const tf::Stamped<tf:
         if(footprint_cost < 0)
         {
             traj_free  = false;
-            dist_without_obstacles = total_ahead_distance;
             break;
         }
         else
@@ -500,6 +499,8 @@ bool ManeuverPlanner::checkFootprintTransformLocalToGlobal(const tf::Stamped<tf:
         }
         
     }
+    dist_without_obstacles = total_ahead_distance;
+    
     return traj_free;
         
 }
@@ -609,7 +610,6 @@ bool ManeuverPlanner::searchTrajectoryCompoundLeftRightManeuver(const tf::Stampe
         temp_goal_tf.setOrigin(center_midway_goal_tf.getOrigin()); 
         temp_goal_tf.setRotation(center_midway_goal_tf.getRotation()); 
         
-        dist_without_obstacles = 0.0;
         double dist_without_obstacles_single_maneuver;  
         plan_first_m.clear();
         maneuver_traj_succesful = searchTrajectorySingleManeuver(temp_start_tf, temp_goal_tf, refpoint_tf_robot_coord_vec, plan_first_m, dist_without_obstacles_single_maneuver);
@@ -754,7 +754,6 @@ bool ManeuverPlanner::searchTrajectoryOvertakeManeuver(const tf::Stamped<tf::Pos
         // For the first part We try to search a single maneuver, if not possible then go to a double maneuver.
         // This is particularly useful when tehre is a replan during teh first phase
         refpoint_tf_robot_coord_vec.push_back(refpoint_tf_robot_coord);
-        dist_without_obstacles = 0.0;
         double dist_without_obstacles_single_maneuver;    
         plan_first_m.clear();
         maneuver_traj_succesful = searchTrajectorySingleManeuver(temp_start_tf, temp_goal_tf, refpoint_tf_robot_coord_vec, plan_first_m, dist_without_obstacles_single_maneuver);
@@ -773,10 +772,13 @@ bool ManeuverPlanner::searchTrajectoryOvertakeManeuver(const tf::Stamped<tf::Pos
         // Take last pose of previus plan
         poseStampedMsgToTF(*plan_iterator,temp_start_tf); 
         
+        temp_quat.setRPY(0.0, 0.0, goal_yaw); // force rotation to be same as goal. TODO:This creates a discontinuity. Do this in a proper way by continuing the previous maneuver
+        temp_start_tf.setRotation(temp_quat); 
 
         
         temp_goal_tf.setOrigin(goal_tf.getOrigin());
         temp_goal_tf.setRotation(goal_tf.getRotation());
+        
         
         plan_second_m.clear();
         maneuver_traj_succesful = searchTrajectoryLeftRightManeuver(temp_start_tf, temp_goal_tf, refpoint_tf_robot_coord, plan_second_m, dist_without_obstacles);
@@ -1348,8 +1350,8 @@ bool ManeuverPlanner::makePlanUntilPossible(const geometry_msgs::PoseStamped& st
                 refpoint_tf_robot_coord.stamp_ = goal_tf.stamp_;
                 temp_quat.setRPY(0.0,0.0,0.0);
 
-//                 temp_vector3 = tf::Vector3(topRightCorner_[0], topRightCorner_[1], 0.0);
-                temp_vector3 = tf::Vector3(0.0, 0.0, 0.0);
+                temp_vector3 = tf::Vector3(topRightCorner_[0], topRightCorner_[1], 0.0);
+//                 temp_vector3 = tf::Vector3(0.0, 0.0, 0.0);
                 refpoint_tf_robot_coord.setData(tf::Transform(temp_quat,temp_vector3));         
                 plan.clear();
                 maneuver_traj_succesful = searchTrajectoryOvertakeManeuver(start_tf, goal_tf, refpoint_tf_robot_coord, plan, dist_without_obstacles);        

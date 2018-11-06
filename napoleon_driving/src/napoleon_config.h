@@ -9,7 +9,7 @@ using namespace std;
 const double env_cor_width = 2.45;
 
 // Optimization / performance parameters
-const double v_cruising = 1.4;          // Max velocity [m/s] while cruising
+const double v_cruising = 0.4;          // Max velocity [m/s] while cruising
 const double feeler_size = 0.8;         // Size of feeler [m] - used to predict where ropod goes suppose it would go straight
 const double env_tctw_size = 0.05;      // Too close too wall area size [m]
 const double env_trns_size = 0.15;      // Transition area size [m]

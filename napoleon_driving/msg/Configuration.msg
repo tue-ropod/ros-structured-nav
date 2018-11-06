@@ -1,0 +1,2 @@
+bool use_line_planner
+bool precise_goal

@@ -2,23 +2,19 @@
 <launch>
 
         <arg name="robotName" default="ropod_tue_1"/>  
+        <arg name="robotCommonName" default="ropod"/>  
         <arg name="laser1_name" value ="laser"/>
-        <arg name="map_file" default="$(find ed_object_models)/models/hospital_test_amcl/walls/map_amcl.yaml" />
+      <!--  <arg name="map_file" default="$(find ed_object_models)/models/hospital_test_amcl/walls/map_amcl.yaml" /> -->
         <!--<arg name="map_file" default="$(find ropod_navigation_test)/config/amk-f064/map.yaml"/>-->
-
-<!--         <arg name="map_file" default="$(find ed_object_models)/models/tue_hallway_RLtoAL/walls/shape//map.yaml"/> -->
+        <arg name="map_file" default="$(find ed_object_models)/models/tue_hallway_RLtoAL/walls/shape/map.yaml"/>
        
-
-       <!--  <arg name="map_file" default="/home/cesar/ropod-project-software/catkin_workspace/src/applications/occupancy_grids/tue/lab-level/map.yaml"/> 
--->       
-
         
    <!-- Run the map server -->
      <node name="map_server" pkg="map_server" type="map_server" args="$(arg map_file)" />
         
     <!--- Run AMCL -->
     <node pkg="amcl" type="amcl" name="amcl">
-        <remap from="scan" to="/$(arg robotName)/$(arg laser1_name)/scan"/>
+        <remap from="/scan" to="/$(arg robotName)/$(arg laser1_name)/scan"/>
 
         <!--- Odometery model parameters  -->
         <param name="odom_model_type" value="omni"/>
@@ -27,8 +23,8 @@
         <param name="odom_alpha3" value="5.0"/>
         <param name="odom_alpha4" value="5.0"/>
         <param name="odom_alpha5" value="7.0"/>
-        <param name="odom_frame_id" value="/ropod/odom"/>
-        <param name="base_frame_id" value="/ropod/base_link"/>
+        <param name="odom_frame_id" value="/$(arg robotCommonName)/odom"/>
+        <param name="base_frame_id" value="/$(arg robotCommonName)/base_link"/>
         <param name="global_frame_id" value="/map"/>
 
         <!-- Overall filter parameters -->
@@ -81,17 +77,17 @@
                     
     </node>-->    
     
-    <node name="maneuver_navigation" pkg="maneuver_navigation" type="maneuver_navigation" output="screen">
+    <node name="napoleon_driving" pkg="napoleon_driving" type="napoleon_driving" output="screen">
      
         <rosparam file="$(find ropod_navigation_test)/config/parameters/costmap_common_params.yaml" command="load" ns="local_costmap" />    
         <rosparam file="$(find ropod_navigation_test)/config/parameters/footprint_ropod.yaml" command="load" ns="local_costmap" />       
         <rosparam file="$(find ropod_navigation_test)/config/parameters/local_costmap_params.yaml"  command="load"/>    
         <rosparam file="$(find ropod_navigation_test)/config/parameters/teb_local_planner_params_ropod.yaml" command="load" />     
-        <param name="default_ropod_navigation_param_file" value ="$(find maneuver_navigation)/config/footprint_local_planner_params_ropod.yaml"/>
-        <param name="default_ropod_load_navigation_param_file" value ="$(find maneuver_navigation)/config/footprint_local_planner_params_ropod_load.yaml"/>
+        <param name="default_ropod_navigation_param_file" value ="$(find napoleon_driving)/config/footprint_local_planner_params_ropod.yaml"/>
+        <param name="default_ropod_load_navigation_param_file" value ="$(find napoleon_driving)/config/footprint_local_planner_params_ropod_load.yaml"/>
         
         
-        <remap from="/maneuver_navigation/cmd_vel" to="/load/cmd_vel"/>
+        <remap from="/napoleon_driving/cmd_vel" to="/load/cmd_vel"/>
         <remap from="odom" to="/load/odom"/>
         
     </node>        

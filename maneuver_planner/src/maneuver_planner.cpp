@@ -49,7 +49,7 @@ ManeuverPlanner::ManeuverPlanner()
 ManeuverPlanner::ManeuverPlanner(std::string name, costmap_2d::Costmap2DROS* costmap_ros)
     : costmap_ros_(NULL), initialized_(false)
 {
-    initialize(name, costmap_ros);
+    initialize(name, costmap_ros); 
 }
 
 void ManeuverPlanner::initialize(std::string name, costmap_2d::Costmap2DROS* costmap_ros)
@@ -57,7 +57,7 @@ void ManeuverPlanner::initialize(std::string name, costmap_2d::Costmap2DROS* cos
     if(!initialized_)
     {
         costmap_ros_ = costmap_ros;
-        costmap_ = costmap_ros_->getCostmap();
+        costmap_ = costmap_ros_->getCostmap();        
 
         ros::NodeHandle private_nh("~/" + name);
         private_nh.param("step_size", step_size_, costmap_->getResolution());
@@ -123,6 +123,8 @@ void ManeuverPlanner::initialize(std::string name, costmap_2d::Costmap2DROS* cos
         radius_search_ = parameter_generator::ParameterGenerator(0.2, 2.0, 2.0, 0.05, 20);
         midway_scale_lr_search_ = parameter_generator::ParameterGenerator(0.05, 0.95, 1.0, 0.1, 10);
         midway_side_ovt_search_ = parameter_generator::ParameterGenerator(0.2, 2.0, 2.0, 0.2, 20);
+        maxDistanceBeforeObstacle_ = 1.0; // TODO: Use parameter // TODO: make the  parameter tunable from constructor
+        maxDistanceBeforeReplanning_ = 1.0; // TODO: Use parameter // TODO: make the  parameter tunable from constructor
         initialized_ = true;
     }
     else
@@ -714,7 +716,13 @@ bool ManeuverPlanner::searchTrajectoryOvertakeManeuver(const tf::Stamped<tf::Pos
 
     std::vector<geometry_msgs::PoseStamped> plan_first_m;
     std::vector<geometry_msgs::PoseStamped> plan_second_m;
+    std::vector<geometry_msgs::PoseStamped> plan_internal;
+    
+    std::vector<geometry_msgs::PoseStamped> plan_first_m_final;
+    std::vector<geometry_msgs::PoseStamped> plan_second_m_final;
+    
     std::vector<geometry_msgs::PoseStamped>::iterator plan_iterator;
+    double dist_to_goal_final = 1000.0; // TODO: Use infinite instead of a large number
 
     double midway_side_ovt;
         
@@ -761,6 +769,34 @@ bool ManeuverPlanner::searchTrajectoryOvertakeManeuver(const tf::Stamped<tf::Pos
             maneuver_traj_succesful = searchTrajectoryLeftRightManeuver(temp_start_tf, temp_goal_tf, refpoint_tf_robot_coord, plan_first_m, dist_without_obstacles_single_maneuver);
         
         dist_without_obstacles = dist_without_obstacles_single_maneuver;
+        
+        Eigen::Vector2d goalPoint;
+        Eigen::Vector2d endPlanPoint;
+        tf::Stamped<tf::Pose> temp_endplan_tf;
+        double dist_to_goal;
+        
+        if( plan_first_m.size() > 1 )
+        {
+            goalPoint[0] = goal_tf.getOrigin().getX();
+            goalPoint[1] = goal_tf.getOrigin().getY();
+                        
+            plan_iterator = plan_first_m.end()-1;
+            poseStampedMsgToTF(*plan_iterator,temp_endplan_tf); 
+            endPlanPoint[0] = temp_endplan_tf.getOrigin().getX();
+            endPlanPoint[1] = temp_endplan_tf.getOrigin().getY();
+            
+            dist_to_goal = hypot(goalPoint[1]-endPlanPoint[1],goalPoint[0]-endPlanPoint[0]);
+            
+            if( dist_to_goal < dist_to_goal_final )
+            { // Update plan
+                plan_first_m_final.clear();
+                for (plan_iterator = plan_first_m.begin(); plan_iterator != plan_first_m.end(); plan_iterator++)
+                {
+                    plan_first_m_final.push_back(*plan_iterator);
+                }    
+                dist_to_goal_final = dist_to_goal;
+            }
+        }
         if (!maneuver_traj_succesful)
             continue;
         
@@ -786,14 +822,41 @@ bool ManeuverPlanner::searchTrajectoryOvertakeManeuver(const tf::Stamped<tf::Pos
     //         ROS_INFO("Second trajectory maneuver_traj_succesful: %d", maneuver_traj_succesful);
         
         
+        if( plan_second_m.size() > 1 )
+        {        
+            plan_iterator = plan_second_m.end()-1;
+            poseStampedMsgToTF(*plan_iterator,temp_endplan_tf); 
+            endPlanPoint[0] = temp_endplan_tf.getOrigin().getX();
+            endPlanPoint[1] = temp_endplan_tf.getOrigin().getY();
+            
+            dist_to_goal =  hypot(goalPoint[1]-endPlanPoint[1],goalPoint[0]-endPlanPoint[0]);
+            
+            
+            if( dist_to_goal < dist_to_goal_final )
+            { // Update plan
+                dist_to_goal_final = dist_to_goal;
+                plan_first_m_final.clear();
+                plan_second_m_final.clear();
+                for (plan_iterator = plan_first_m.begin(); plan_iterator != plan_first_m.end(); plan_iterator++)
+                {
+                    plan_first_m_final.push_back(*plan_iterator);
+                }    
+                for (plan_iterator = plan_second_m.begin(); plan_iterator != plan_second_m.end(); plan_iterator++)
+                {
+                    plan_second_m_final.push_back(*plan_iterator);
+                }                                      
+            }
+        }
+        
+        
     }
   
 
-    for (plan_iterator = plan_first_m.begin(); plan_iterator != plan_first_m.end(); plan_iterator++)
+    for (plan_iterator = plan_first_m_final.begin(); plan_iterator != plan_first_m_final.end(); plan_iterator++)
     {
         plan.push_back(*plan_iterator);
     }
-    for (plan_iterator = plan_second_m.begin(); plan_iterator != plan_second_m.end(); plan_iterator++)
+    for (plan_iterator = plan_second_m_final.begin(); plan_iterator != plan_second_m_final.end(); plan_iterator++)
     {
         plan.push_back(*plan_iterator);
     }            
@@ -1157,6 +1220,29 @@ bool ManeuverPlanner::linePlanner(const geometry_msgs::PoseStamped& start,
 
 }
 
+void ManeuverPlanner::removeLastPoints( std::vector<geometry_msgs::PoseStamped>& plan, double & distToRemove)
+{
+    int i;
+    double dist_next_point;
+    double total_ahead_distance = 0.0;
+    
+    for (i = plan.size()-1; i > 0; i--) 
+    {
+        dist_next_point = hypot(plan[i].pose.position.x-plan[i-1].pose.position.x,plan[i].pose.position.y-plan[i-1].pose.position.y);
+        total_ahead_distance += dist_next_point;
+        if( total_ahead_distance < distToRemove)
+        {
+           plan[i].pose = plan[i-1].pose;
+        }
+        else
+        {
+            break;
+        }
+    }  
+    return;
+    
+}
+
 bool ManeuverPlanner::makePlan(const geometry_msgs::PoseStamped& start,
                                const geometry_msgs::PoseStamped& goal, std::vector<geometry_msgs::PoseStamped>& plan, double & dist_without_obstacles)
 {
@@ -1249,131 +1335,138 @@ bool ManeuverPlanner::makePlanUntilPossible(const geometry_msgs::PoseStamped& st
     double maneuver_traj_succesful = false;
     
     
-    if (maneuver_type != ManeuverPlanner::MANEUVER_NONE)
+
+    switch (maneuver_type)
     {
-        switch (maneuver_type)
-        {
-        case ManeuverPlanner::MANEUVER_LEFT :
-            // Initially choose top right corner (trc) as reference to generate
-            // trajectory. Suitable for when trc is desired to keep parallel to the
-            // wall. If the trc trajectory is not convex, we switch back
-            // reference point to middle of the rotation axis.
-            refpoint_tf_robot_coord.frame_id_ = "/wholerobot_link";
-            refpoint_tf_robot_coord.stamp_ = goal_tf.stamp_;
-            temp_quat.setRPY(0.0,0.0,0.0);
-            refpoint_tf_robot_coord_vec.clear();
-                                
-            
-            temp_vector3 = tf::Vector3(topRightCorner_[0], topRightCorner_[1], 0.0);
-            refpoint_tf_robot_coord.setData(tf::Transform(temp_quat,temp_vector3));            
-            refpoint_tf_robot_coord_vec.push_back(refpoint_tf_robot_coord);        
-            
-            temp_vector3 = tf::Vector3(0.0, 0.0, 0.0);
-            refpoint_tf_robot_coord.setData(tf::Transform(temp_quat,temp_vector3));
-            refpoint_tf_robot_coord_vec.push_back(refpoint_tf_robot_coord);                
-            
-            temp_vector3 = tf::Vector3(left_side_ref_point_[0], left_side_ref_point_[1], 0.0);
-            refpoint_tf_robot_coord.setData(tf::Transform(temp_quat,temp_vector3));
-            refpoint_tf_robot_coord_vec.push_back(refpoint_tf_robot_coord);
-            
-            ROS_INFO("Left turn");
-            maneuver_traj_succesful = searchTrajectorySingleManeuver(start_tf, goal_tf, refpoint_tf_robot_coord_vec, plan, dist_without_obstacles);
-            break;
+    case ManeuverPlanner::MANEUVER_LEFT :
+        // Initially choose top right corner (trc) as reference to generate
+        // trajectory. Suitable for when trc is desired to keep parallel to the
+        // wall. If the trc trajectory is not convex, we switch back
+        // reference point to middle of the rotation axis.
+        refpoint_tf_robot_coord.frame_id_ = "/wholerobot_link";
+        refpoint_tf_robot_coord.stamp_ = goal_tf.stamp_;
+        temp_quat.setRPY(0.0,0.0,0.0);
+        refpoint_tf_robot_coord_vec.clear();
+                            
+        
+        temp_vector3 = tf::Vector3(topRightCorner_[0], topRightCorner_[1], 0.0);
+        refpoint_tf_robot_coord.setData(tf::Transform(temp_quat,temp_vector3));            
+        refpoint_tf_robot_coord_vec.push_back(refpoint_tf_robot_coord);        
+        
+        temp_vector3 = tf::Vector3(0.0, 0.0, 0.0);
+        refpoint_tf_robot_coord.setData(tf::Transform(temp_quat,temp_vector3));
+        refpoint_tf_robot_coord_vec.push_back(refpoint_tf_robot_coord);                
+        
+        temp_vector3 = tf::Vector3(left_side_ref_point_[0], left_side_ref_point_[1], 0.0);
+        refpoint_tf_robot_coord.setData(tf::Transform(temp_quat,temp_vector3));
+        refpoint_tf_robot_coord_vec.push_back(refpoint_tf_robot_coord);
+        
+        ROS_INFO("Try to plan Left turn");
+        maneuver_traj_succesful = searchTrajectorySingleManeuver(start_tf, goal_tf, refpoint_tf_robot_coord_vec, plan, dist_without_obstacles);
+        break;
 
-        case ManeuverPlanner::MANEUVER_RIGHT :
-            // Choose a point on the right side, just above axis of rotation
-            // as reference to generate trajectory
-            // Initially choose right side as reference to generate
-            // trajectory. Suitable for when that point should just round the corner.
-            // If recomputing trajectory is not possible, the switch back
-            // reference point to middle of the rotation axis.
-            refpoint_tf_robot_coord.frame_id_ = "/wholerobot_link";
-            refpoint_tf_robot_coord.stamp_ = goal_tf.stamp_;            
-            temp_quat.setRPY(0.0,0.0,0.0);
-            refpoint_tf_robot_coord_vec.clear();
-            
-            temp_vector3 = tf::Vector3(right_side_ref_point_[0], right_side_ref_point_[1], 0.0);
-            refpoint_tf_robot_coord.setData(tf::Transform(temp_quat,temp_vector3));            
-            refpoint_tf_robot_coord_vec.push_back(refpoint_tf_robot_coord);                    
-            
-            temp_vector3 = tf::Vector3(0.0, 0.0, 0.0);
-            refpoint_tf_robot_coord.setData(tf::Transform(temp_quat,temp_vector3));
-            refpoint_tf_robot_coord_vec.push_back(refpoint_tf_robot_coord);                               
-            
-            temp_vector3 = tf::Vector3(topLeftCorner_[0], topLeftCorner_[1], 0.0);
-            refpoint_tf_robot_coord.setData(tf::Transform(temp_quat,temp_vector3));            
-            refpoint_tf_robot_coord_vec.push_back(refpoint_tf_robot_coord);
-            
-            
-            
-            ROS_INFO("Right turn");
-            maneuver_traj_succesful = searchTrajectorySingleManeuver(start_tf, goal_tf, refpoint_tf_robot_coord_vec, plan, dist_without_obstacles);
-            
-            break;            
-        case ManeuverPlanner::MANEUVER_LEFT_RIGHT :
-            // Initially choose top left corner (trc) as reference to generate
-            // trajectory. Suitable for when tlc is desired to keep parallel to the
-            // left wall. 
-            refpoint_tf_robot_coord.frame_id_ = "/wholerobot_link";
-            refpoint_tf_robot_coord.stamp_ = goal_tf.stamp_;
-            temp_quat.setRPY(0.0,0.0,0.0);
-            
+    case ManeuverPlanner::MANEUVER_RIGHT :
+        // Choose a point on the right side, just above axis of rotation
+        // as reference to generate trajectory
+        // Initially choose right side as reference to generate
+        // trajectory. Suitable for when that point should just round the corner.
+        // If recomputing trajectory is not possible, the switch back
+        // reference point to middle of the rotation axis.
+        refpoint_tf_robot_coord.frame_id_ = "/wholerobot_link";
+        refpoint_tf_robot_coord.stamp_ = goal_tf.stamp_;            
+        temp_quat.setRPY(0.0,0.0,0.0);
+        refpoint_tf_robot_coord_vec.clear();
+        
+        temp_vector3 = tf::Vector3(right_side_ref_point_[0], right_side_ref_point_[1], 0.0);
+        refpoint_tf_robot_coord.setData(tf::Transform(temp_quat,temp_vector3));            
+        refpoint_tf_robot_coord_vec.push_back(refpoint_tf_robot_coord);                    
+        
+        temp_vector3 = tf::Vector3(0.0, 0.0, 0.0);
+        refpoint_tf_robot_coord.setData(tf::Transform(temp_quat,temp_vector3));
+        refpoint_tf_robot_coord_vec.push_back(refpoint_tf_robot_coord);                               
+        
+        temp_vector3 = tf::Vector3(topLeftCorner_[0], topLeftCorner_[1], 0.0);
+        refpoint_tf_robot_coord.setData(tf::Transform(temp_quat,temp_vector3));            
+        refpoint_tf_robot_coord_vec.push_back(refpoint_tf_robot_coord);
+        
+        
+        
+        ROS_INFO("Try to plan Right turn");
+        maneuver_traj_succesful = searchTrajectorySingleManeuver(start_tf, goal_tf, refpoint_tf_robot_coord_vec, plan, dist_without_obstacles);
+        
+        break;            
+    case ManeuverPlanner::MANEUVER_LEFT_RIGHT :
+        // Initially choose top left corner (trc) as reference to generate
+        // trajectory. Suitable for when tlc is desired to keep parallel to the
+        // left wall. 
+        refpoint_tf_robot_coord.frame_id_ = "/wholerobot_link";
+        refpoint_tf_robot_coord.stamp_ = goal_tf.stamp_;
+        temp_quat.setRPY(0.0,0.0,0.0);
+        
 //             temp_vector3 = tf::Vector3(topLeftCorner_[0], topLeftCorner_[1], 0.0);
-            temp_vector3 = tf::Vector3(topRightCorner_[0], topRightCorner_[1], 0.0);
-            refpoint_tf_robot_coord.setData(tf::Transform(temp_quat,temp_vector3));
-            
-            ROS_INFO("Left Right turn"); 
-            maneuver_traj_succesful = searchTrajectoryLeftRightManeuver(start_tf, goal_tf, refpoint_tf_robot_coord, plan, dist_without_obstacles);            
-            break;
-        case ManeuverPlanner::MANEUVER_RIGHT_LEFT :
-            // Initially choose top left corner (trc) as reference to generate
-            // trajectory. Suitable for when tlc is desired to keep parallel to the
-            // left wall. 
+        temp_vector3 = tf::Vector3(topRightCorner_[0], topRightCorner_[1], 0.0);
+        refpoint_tf_robot_coord.setData(tf::Transform(temp_quat,temp_vector3));
+        
+        ROS_INFO("Try to plan Left-Right turn"); 
+        maneuver_traj_succesful = searchTrajectoryLeftRightManeuver(start_tf, goal_tf, refpoint_tf_robot_coord, plan, dist_without_obstacles);            
+        break;
+    case ManeuverPlanner::MANEUVER_RIGHT_LEFT :
+        // Initially choose top left corner (trc) as reference to generate
+        // trajectory. Suitable for when tlc is desired to keep parallel to the
+        // left wall. 
+        refpoint_tf_robot_coord.frame_id_ = "/wholerobot_link";
+        refpoint_tf_robot_coord.stamp_ = goal_tf.stamp_;
+        temp_quat.setRPY(0.0,0.0,0.0);
+
+        temp_vector3 = tf::Vector3(topRightCorner_[0], topRightCorner_[1], 0.0);
+        refpoint_tf_robot_coord.setData(tf::Transform(temp_quat,temp_vector3));
+
+        
+        ROS_INFO("Try to plan Right-Left turn"); 
+        maneuver_traj_succesful = searchTrajectoryLeftRightManeuver(start_tf, goal_tf, refpoint_tf_robot_coord, plan, dist_without_obstacles);            
+        break;     
+    case ManeuverPlanner::MANEUVER_NONE :
+        ROS_INFO("Try straight line"); 
+        maneuver_traj_succesful = linePlanner(start, goal, plan, dist_without_obstacles);    
+        break;     
+    case ManeuverPlanner::MANEUVER_STRAIGHT_OTHERWISE_OVERTAKE :
+        ROS_INFO("Try straight line, otherwise overtake"); 
+        maneuver_traj_succesful = linePlanner(start, goal, plan, dist_without_obstacles);            
+        if( maneuver_traj_succesful == false && dist_without_obstacles < ( maxDistanceBeforeObstacle_ + maxDistanceBeforeReplanning_) )
+        {                
+            ROS_INFO("Did not work and obstacles are close: Try to plan Overtake maneuver"); 
             refpoint_tf_robot_coord.frame_id_ = "/wholerobot_link";
             refpoint_tf_robot_coord.stamp_ = goal_tf.stamp_;
             temp_quat.setRPY(0.0,0.0,0.0);
 
             temp_vector3 = tf::Vector3(topRightCorner_[0], topRightCorner_[1], 0.0);
-            refpoint_tf_robot_coord.setData(tf::Transform(temp_quat,temp_vector3));
-
-            
-            ROS_INFO("Right Left turn"); 
-            maneuver_traj_succesful = searchTrajectoryLeftRightManeuver(start_tf, goal_tf, refpoint_tf_robot_coord, plan, dist_without_obstacles);            
-            break;     
-        case ManeuverPlanner::MANEUVER_STRAIGHT_OTHERWISE_OVERTAKE :
-            maneuver_traj_succesful = linePlanner(start, goal, plan, dist_without_obstacles);
-            ROS_INFO("Try straight line"); 
-            if( maneuver_traj_succesful == false)
-            {                
-                ROS_INFO("Overtake maneuver"); 
-                refpoint_tf_robot_coord.frame_id_ = "/wholerobot_link";
-                refpoint_tf_robot_coord.stamp_ = goal_tf.stamp_;
-                temp_quat.setRPY(0.0,0.0,0.0);
-
-                temp_vector3 = tf::Vector3(topRightCorner_[0], topRightCorner_[1], 0.0);
 //                 temp_vector3 = tf::Vector3(0.0, 0.0, 0.0);
-                refpoint_tf_robot_coord.setData(tf::Transform(temp_quat,temp_vector3));         
-                plan.clear();
-                maneuver_traj_succesful = searchTrajectoryOvertakeManeuver(start_tf, goal_tf, refpoint_tf_robot_coord, plan, dist_without_obstacles);        
-            }
-            
-            break;            
-        default:
-            break;
+            refpoint_tf_robot_coord.setData(tf::Transform(temp_quat,temp_vector3));         
+            plan.clear();
+            maneuver_traj_succesful = searchTrajectoryOvertakeManeuver(start_tf, goal_tf, refpoint_tf_robot_coord, plan, dist_without_obstacles);        
         }
-
+        
+//         if( maneuver_traj_succesful == false)
+//         {                
+//             ROS_INFO("Did not work: Return with straight line up to obstacles"); 
+//             plan.clear();
+//             maneuver_traj_succesful = linePlanner(start, goal, plan, dist_without_obstacles); 
+//         }
+        break;            
+    default:
+        break;
     }
-   
+
+
    
     
-    if( maneuver_traj_succesful == false) // Maneuver planning failed. Attemp linear planner
+
+    if( maneuver_traj_succesful == false && maneuver_type != ManeuverPlanner::MANEUVER_STRAIGHT_OTHERWISE_OVERTAKE && dist_without_obstacles < ( maxDistanceBeforeObstacle_ + maxDistanceBeforeReplanning_) )
     {
-        ROS_WARN("No single or double left or right maneuver possible. Execute default planner and or ");
-        plan.clear();
-        maneuver_traj_succesful = linePlanner(start, goal, plan, dist_without_obstacles);
-        if( maneuver_type != ManeuverPlanner::MANEUVER_STRAIGHT_OTHERWISE_OVERTAKE && maneuver_traj_succesful == false)
+        ROS_WARN("Basic maneuvers did not work and obstacles are close, Try to plan Line or Overtake maneuver");
+        maneuver_traj_succesful = linePlanner(start, goal, plan, dist_without_obstacles); 
+        if (maneuver_traj_succesful == false)
         {
-            ROS_INFO("Overtake maneuver, Last resource"); 
             refpoint_tf_robot_coord.frame_id_ = "/wholerobot_link";
             refpoint_tf_robot_coord.stamp_ = goal_tf.stamp_;
             temp_quat.setRPY(0.0,0.0,0.0);
@@ -1381,12 +1474,17 @@ bool ManeuverPlanner::makePlanUntilPossible(const geometry_msgs::PoseStamped& st
             temp_vector3 = tf::Vector3(topRightCorner_[0], topRightCorner_[1], 0.0);
             refpoint_tf_robot_coord.setData(tf::Transform(temp_quat,temp_vector3));         
             plan.clear();
-            maneuver_traj_succesful = searchTrajectoryOvertakeManeuver(start_tf, goal_tf, refpoint_tf_robot_coord, plan, dist_without_obstacles);                    
+            maneuver_traj_succesful = searchTrajectoryOvertakeManeuver(start_tf, goal_tf, refpoint_tf_robot_coord, plan, dist_without_obstacles);   
         }
+        
+                 
     }
+   
 
     if(maneuver_traj_succesful == false){
-        ROS_WARN("No free trajectory found");
+        // remove last maxDistanceBeforeObstacle_ meters from trajectory
+        removeLastPoints(plan, maxDistanceBeforeObstacle_);                
+        ROS_WARN("No goal-free trajectory found");
     }
     return maneuver_traj_succesful;
 

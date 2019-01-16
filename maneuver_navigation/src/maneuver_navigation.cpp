@@ -42,7 +42,7 @@ void ManeuverNavigation::init()
     nh_.param("base_local_planner", local_planner_str, std::string("teb_local_planner/TebLocalPlannerROS"));
     try {      
       local_planner_ = blp_loader_.createInstance(local_planner_str);
-      //ROS_INFO("Created local_planner %s", local_planner_str.c_str());
+      //printf("Created local_planner %s", local_planner_str.c_str());
       local_planner_->initialize(blp_loader_.getName(local_planner_str), &tf_, local_costmap_ros);
     } catch (const pluginlib::PluginlibException& ex) {
       //ROS_FATAL("Failed to create the %s planner, are you sure it is properly registered and that the containing library is built? Exception: %s", local_planner.c_str(), ex.what());
@@ -60,8 +60,7 @@ void ManeuverNavigation::init()
     local_nav_state_ = LOC_NAV_IDLE;
     manv_nav_state_  = MANV_NAV_IDLE;
     
-    MAX_AHEAD_DIST_BEFORE_REPLANNING = 2.0;
-    REPLANNING_HYSTERESIS_DISTANCE = 1.0;
+    MAX_AHEAD_DIST_BEFORE_REPLANNING = 1.0;
     goal_free_ =  false;    
     
     vel_pub_ = nh_.advertise<geometry_msgs::Twist>("cmd_vel", 1);
@@ -225,7 +224,7 @@ bool ManeuverNavigation::checkFootprintOnGlobalPlan(const std::vector<geometry_m
             footprint_cost = footprintCost(pose_from_plan.getOrigin().getX(), pose_from_plan.getOrigin().getY(), yaw);
             if( footprint_cost < 0 )
             {
-                ROS_INFO("footprint_cost %f",footprint_cost);
+                printf("footprint_cost %f",footprint_cost);
                 is_traj_free = false;                
                 index_before_obs = i;
                 break;
@@ -273,7 +272,7 @@ void ManeuverNavigation::callLocalNavigationStateMachine()
             
             if(local_planner_->isGoalReached())
             {
-                ROS_INFO("local planner, Goal reached!");
+                printf("local planner, partial Goal reached!");
                 local_nav_state_ = LOC_NAV_IDLE;
                 tf::Stamped<tf::Pose> goal_pose;
                 tf::poseStampedMsgToTF(goal_,goal_pose);
@@ -283,7 +282,9 @@ void ManeuverNavigation::callLocalNavigationStateMachine()
                 double diff_yaw =  tf::getYaw(diff_pose.getRotation()); 
                 
                 if( mn_goal_.conf.precise_goal && ( std::abs(dist_to_goal) > xy_goal_tolerance_ || std::abs(diff_yaw) > yaw_goal_tolerance_ ) ) 
-                     manv_nav_state_  = MANV_NAV_MAKE_INIT_PLAN; // replan maneuver until tolerances are met
+                    manv_nav_state_  = MANV_NAV_MAKE_INIT_PLAN; // replan maneuver until tolerances are met
+                else if (goal_free_ == false)
+                    manv_nav_state_  = MANV_NAV_MAKE_INIT_PLAN; // replan maneuver until goal is free
                 else
                     manv_nav_state_   = MANV_NAV_IDLE;
                 
@@ -367,7 +368,7 @@ void ManeuverNavigation::callManeuverNavigationStateMachine()
             {
                 goal_free_ = maneuver_planner.makePlan(start,goal_, plan, dist_before_obs);            
             }
-            ROS_INFO("dist_before_obs: %f", dist_before_obs);
+            std::cout << "Navigation: dist_before_obs " << dist_before_obs << std::endl; 
             if( dist_before_obs > MAX_AHEAD_DIST_BEFORE_REPLANNING || goal_free_ == true)
             {
                 if( plan.size()>0 )
@@ -383,7 +384,7 @@ void ManeuverNavigation::callManeuverNavigationStateMachine()
             }
             else
             {
-                ROS_WARN("maneuver_navigation cannot make a plan due to obstacles, inform and keep trying");
+                std::cout <<  "Warning: maneuver_navigation cannot make a plan due to obstacles, inform and keep trying" << std::endl; 
                 publishZeroVelocity();  
               //  local_nav_state_ = LOC_NAV_IDLE;
                 // manv_nav_state_   = MANV_NAV_IDLE; 
@@ -394,7 +395,7 @@ void ManeuverNavigation::callManeuverNavigationStateMachine()
              is_plan_free = checkFootprintOnGlobalPlan(plan, MAX_AHEAD_DIST_BEFORE_REPLANNING, dist_before_obs, index_closest_to_pose, index_before_obs);
              if( !is_plan_free)
              {
-                ROS_INFO("Obstacle in front at %.2f m. Try to replan",dist_before_obs);
+                std::cout << "Navigation: Obstacle in front at " << dist_before_obs << ". Try to replan" << std::endl; 
                 // publishZeroVelocity();  // TODO: Do this smarter by decreasing speed while computing new path    
                 if( !getRobotPose(global_pose) )
                     break;
@@ -410,23 +411,24 @@ void ManeuverNavigation::callManeuverNavigationStateMachine()
                     }
                     else
                     {
-                        ROS_ERROR("Empty plan");
+                         std::cout << "Error: Empty plan" << std::endl;
                     }
                 }
                 else
                 {
-                    ROS_INFO("No replan possible. Stop, inform and continue trrying");
+                    std::cout <<  "No replan possible. Stop, inform and continue trying" << std::endl; 
                     publishZeroVelocity();        
                    // local_nav_state_ = LOC_NAV_IDLE;
                     manv_nav_state_   = MANV_NAV_MAKE_INIT_PLAN;
                 }                                 
              }
-             else if (goal_free_ == false && dist_before_obs < (MAX_AHEAD_DIST_BEFORE_REPLANNING+REPLANNING_HYSTERESIS_DISTANCE)) // When the goal was not free and we are close to end of temporary plan, replan
+             else if (goal_free_ == false && dist_before_obs < (MAX_AHEAD_DIST_BEFORE_REPLANNING)) // When the goal was not free and we are close to end of temporary plan, replan
              {
                 if( !getRobotPose(global_pose) )
                     break;
                 
-                tf::poseStampedTFToMsg(global_pose, start);            
+                tf::poseStampedTFToMsg(global_pose, start);       
+                 std::cout <<  "Aproaching to end of temporary plan, distance" << dist_before_obs <<" m. Make new plan" << std::endl; 
                 goal_free_ = maneuver_planner.makePlan(start,goal_, plan, dist_before_obs);            
                 if( goal_free_ || dist_before_obs > MAX_AHEAD_DIST_BEFORE_REPLANNING )
                 {
@@ -437,7 +439,7 @@ void ManeuverNavigation::callManeuverNavigationStateMachine()
                     }
                     else
                     {
-                        ROS_ERROR("Empty plan");
+                        std::cout << "Error: Empty plan" << std::endl;
                     }                    
                 }              
              }

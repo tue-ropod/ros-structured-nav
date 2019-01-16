@@ -77,7 +77,6 @@ public:
       
 private:      
    double MAX_AHEAD_DIST_BEFORE_REPLANNING;     // TODO: make static const?
-   double REPLANNING_HYSTERESIS_DISTANCE;       // TODO: make static const?
    bool initialized_;
    bool goal_free_;
    bool simple_goal_;

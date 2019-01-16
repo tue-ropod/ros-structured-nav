@@ -163,6 +163,8 @@ namespace maneuver_planner{
       bool makePlanUntilPossible(const geometry_msgs::PoseStamped& start,
                                const geometry_msgs::PoseStamped& goal, std::vector<geometry_msgs::PoseStamped>& plan, double & dist_without_obstacles);
       
+      void removeLastPoints( std::vector<geometry_msgs::PoseStamped>& plan, double & distToRemove);
+      
       
       enum curveType
       {
@@ -190,6 +192,9 @@ namespace maneuver_planner{
       
       
       bool initialized_;
+      
+      double maxDistanceBeforeObstacle_;
+      double maxDistanceBeforeReplanning_;
   };
 };  
 #endif

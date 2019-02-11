@@ -167,6 +167,7 @@ double ManeuverNavigation::footprintCost(double x_i, double y_i, double theta_i)
 
     //check if the footprint is legal
     double footprint_cost = world_model_->footprintCost(x_i, y_i, theta_i, footprint);
+    
     return footprint_cost;
 }
 
@@ -196,7 +197,9 @@ bool ManeuverNavigation::checkFootprintOnGlobalPlan(const std::vector<geometry_m
             index_pose = i; // TODO: Do this in a smarter way, remebering last index. Index needs to be resseted when there is a replan
         }
         else
+        {
             break;
+        }
     }    
     // Now start checking poses in the future up to the desired distance
     double total_ahead_distance = 0.0;
@@ -300,9 +303,12 @@ void ManeuverNavigation::callLocalNavigationStateMachine()
             {
                 ROS_ERROR("local planner, The local planner could not find a valid plan.");
                 local_plan_infeasible_ = true;
+                
+//                 local_nav_state_ = LOC_NAV_SET_PLAN;
+                
 //                 publishZeroVelocity();        
-//                 local_nav_state_ = LOC_NAV_IDLE;
-//                 manv_nav_state_   = MANV_NAV_MAKE_INIT_PLAN;
+                local_nav_state_ = LOC_NAV_IDLE;
+                manv_nav_state_   = MANV_NAV_MAKE_INIT_PLAN;
             }
             
                   
@@ -428,7 +434,7 @@ void ManeuverNavigation::callManeuverNavigationStateMachine()
                     break;
                 
                 tf::poseStampedTFToMsg(global_pose, start);       
-                 std::cout <<  "Aproaching to end of temporary plan, distance" << dist_before_obs <<" m. Make new plan" << std::endl; 
+                 std::cout <<  "Aproaching to end of temporary plan, distance " << dist_before_obs <<" m. Make new plan" << std::endl; 
                 goal_free_ = maneuver_planner.makePlan(start,goal_, plan, dist_before_obs);            
                 if( goal_free_ || dist_before_obs > MAX_AHEAD_DIST_BEFORE_REPLANNING )
                 {

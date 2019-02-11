@@ -283,7 +283,15 @@ double ManeuverPlanner::footprintCost(double x_i, double y_i, double theta_i)
         return -1.0;
 
     //check if the footprint is legal
-    double footprint_cost = world_model_->footprintCost(x_i, y_i, theta_i, footprint);
+    double footprint_cost = world_model_->footprintCost(x_i, y_i, theta_i, footprint);    
+  
+    
+    if(footprint_cost>=253) // TODO: find a way to get this genericly this is the cost_inscribed
+    {
+        return -1.0;
+    }
+          
+    
     return footprint_cost;
 }
 
@@ -1225,14 +1233,18 @@ void ManeuverPlanner::removeLastPoints( std::vector<geometry_msgs::PoseStamped>&
     int i;
     double dist_next_point;
     double total_ahead_distance = 0.0;
+    int initialplanSize = plan.size();
     
-    for (i = plan.size()-1; i > 0; i--) 
+        
+    
+    for (i = initialplanSize-1; i > 0; i--) 
     {
         dist_next_point = hypot(plan[i].pose.position.x-plan[i-1].pose.position.x,plan[i].pose.position.y-plan[i-1].pose.position.y);
         total_ahead_distance += dist_next_point;
+
         if( total_ahead_distance < distToRemove)
         {
-           plan[i].pose = plan[i-1].pose;
+           plan.pop_back();
         }
         else
         {
@@ -1480,7 +1492,12 @@ bool ManeuverPlanner::makePlanUntilPossible(const geometry_msgs::PoseStamped& st
                  
     }
    
-
+//     for (int iplan = 1; iplan<plan.size()-1;iplan++)
+//     {
+//         std::cout << "plan_angle " << plan. <<std::endl;
+//     }
+//    
+   
     if(maneuver_traj_succesful == false){
         // remove last maxDistanceBeforeObstacle_ meters from trajectory
         removeLastPoints(plan, maxDistanceBeforeObstacle_);                

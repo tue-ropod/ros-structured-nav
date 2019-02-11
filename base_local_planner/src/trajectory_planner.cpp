@@ -348,8 +348,8 @@ namespace base_local_planner{
 //           if(path_distance_max_ > 0.0 && !rotating_left && !rotating_right && path_dist_internal > path_distance_max_){
           traj.path_dist_traj_ = path_dist_internal;
           if(path_distance_max_ > 0.0 && path_dist_internal > path_distance_max_){
-//               path_dist*=10.0;              
-             traj.cost_ = -3.0;             
+              path_dist*=10.0;              
+//              traj.cost_ = -3.0;             
              return;
           }
         }

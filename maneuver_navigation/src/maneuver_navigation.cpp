@@ -67,6 +67,11 @@ void ManeuverNavigation::init()
     
     pub_navigation_fb_ =   nh_.advertise<geometry_msgs::PoseStamped> ( "/maneuver_navigation/feedback", 1 );
     
+    last_goal_as_start_ = false;
+    last_goal_valid_ =  false;
+    
+    plan.clear();
+    
     initialized_ = true;
 
 };
@@ -111,10 +116,23 @@ void ManeuverNavigation::reinitPlanner(const geometry_msgs::Polygon& new_footpri
 
 
 bool ManeuverNavigation:: gotoGoal(const geometry_msgs::PoseStamped& goal) 
-{    
-    goal_ = goal;
+{   
     simple_goal_ = true;
-    append_new_maneuver_ = false;
+    if(last_goal_valid_)
+    {
+        last_goal_ = goal_;        
+    }        
+
+    if( last_goal_as_start_ & last_goal_valid_ )    
+    {
+        append_new_maneuver_ = true;
+    }else{
+        append_new_maneuver_ = false;
+    }
+        
+    goal_ = goal;
+    last_goal_valid_ =  true;
+                
     mn_goal_.conf.precise_goal = false;
     mn_goal_.conf.use_line_planner = true;
     manv_nav_state_ = MANV_NAV_MAKE_INIT_PLAN;    
@@ -350,10 +368,16 @@ void ManeuverNavigation::callManeuverNavigationStateMachine()
             break;          
         case MANV_NAV_MAKE_INIT_PLAN:                            
             if( simple_goal_ )
-            {
+            {                
                 if( !getRobotPose(global_pose) )
                     break;            
-                tf::poseStampedTFToMsg(global_pose, start);            
+                
+                tf::poseStampedTFToMsg(global_pose, start);  
+
+                if( last_goal_as_start_ & last_goal_valid_ )   
+                {                    
+                    start.pose.orientation = last_goal_.pose.orientation;
+                }
             }
             else
             {
@@ -402,11 +426,17 @@ void ManeuverNavigation::callManeuverNavigationStateMachine()
              if( !is_plan_free)
              {
                 std::cout << "Navigation: Obstacle in front at " << dist_before_obs << ". Try to replan" << std::endl; 
-                // publishZeroVelocity();  // TODO: Do this smarter by decreasing speed while computing new path    
+                publishZeroVelocity();  // TODO: Do this smarter by decreasing speed while computing new path    
                 if( !getRobotPose(global_pose) )
                     break;
+                tf::poseStampedTFToMsg(global_pose, start);     
                 
-                tf::poseStampedTFToMsg(global_pose, start);              
+                // Find first current position on plan and then move certain disctance ahead to make the plan.
+                is_plan_free = checkFootprintOnGlobalPlan(plan, MAX_AHEAD_DIST_BEFORE_REPLANNING, dist_before_obs, index_closest_to_pose, index_before_obs);
+                old_plan.clear();
+                old_plan.insert(old_plan.begin(), plan.begin()+index_closest_to_pose, plan.begin()+index_before_obs);
+                start.pose.position = plan[index_before_obs].pose.position;
+                                         
                 goal_free_ = maneuver_planner.makePlan(start,goal_, plan);
                 if(goal_free_)
                 {

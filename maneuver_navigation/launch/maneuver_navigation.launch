@@ -78,6 +78,14 @@
                     
     </node>-->    
     
+    <!-- Launch ED -->
+    <node pkg="ed" type="ed" name="ed" args="$(find ropod_navigation_test)/config/model-test-ED-hospital-osm-amcl.yaml" output="screen" >
+        <remap from="~goto_action" to="/ropod_task_executor/GOTO" />
+        <remap from="~undock_action" to="/ropod_task_executor/UNDOCK" />
+        <remap from="~dock_action" to="/ropod_task_executor/DOCK" />
+        <remap from="~debug_route_planner_result_action" to="/ropod_task_executor/debug_route_planner_result_action" />
+    </node>    
+    
     <node name="maneuver_navigation" pkg="maneuver_navigation" type="maneuver_navigation" output="screen">
      
         <rosparam file="$(find ropod_navigation_test)/config/parameters/costmap_common_params.yaml" command="load" ns="local_costmap" />    

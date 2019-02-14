@@ -120,9 +120,9 @@ void ManeuverPlanner::initialize(std::string name, costmap_2d::Costmap2DROS* cos
         }
         
        
-        radius_search_ = parameter_generator::ParameterGenerator(0.2, 2.0, 2.0, 0.05, 20);
-        midway_scale_lr_search_ = parameter_generator::ParameterGenerator(0.05, 0.95, 1.0, 0.1, 10);
-        midway_side_ovt_search_ = parameter_generator::ParameterGenerator(0.2, 2.0, 2.0, 0.2, 20);
+        radius_search_ = parameter_generator::ParameterGenerator(0.1, 2.0, 2.0, 0.05, 20);
+        midway_scale_lr_search_ = parameter_generator::ParameterGenerator(0.0, 0.9, 1.0, 0.1, 20);
+        midway_side_ovt_search_ = parameter_generator::ParameterGenerator(0.0, 1.0, 1.0, 0.1, 20);
         maxDistanceBeforeObstacle_ = 1.0; // TODO: Use parameter // TODO: make the  parameter tunable from constructor
         maxDistanceBeforeReplanning_ = 1.0; // TODO: Use parameter // TODO: make the  parameter tunable from constructor
         initialized_ = true;
@@ -285,11 +285,12 @@ double ManeuverPlanner::footprintCost(double x_i, double y_i, double theta_i)
     //check if the footprint is legal
     double footprint_cost = world_model_->footprintCost(x_i, y_i, theta_i, footprint);    
   
+    /* std::cout << "footprint_cost " << footprint_cost <<std::endl; */
     
-    if(footprint_cost>=253) // TODO: find a way to get this genericly this is the cost_inscribed
-    {
-        return -1.0;
-    }
+//     if(footprint_cost>=200) // TODO: find a way to get this genericly this is the cost_inscribed
+//     {
+//         return -1.0;
+//     }
           
     
     return footprint_cost;
@@ -734,10 +735,20 @@ bool ManeuverPlanner::searchTrajectoryOvertakeManeuver(const tf::Stamped<tf::Pos
 
     double midway_side_ovt;
         
-    midway_side_ovt_search_.resetLinearSearch(midway_side_ovt_search_.lin_search_min_, midway_side_ovt_search_.lin_search_max_);
-//         midway_side_ovt_search_.resetMidSearch(midway_side_ovt_search_.lin_search_min_, midway_side_ovt_search_.lin_search_max_);
 
-    while( midway_side_ovt_search_.linearSearch(midway_side_ovt) & !maneuver_traj_succesful){         
+
+    
+   for (int iside = 0; iside<2; iside++)
+   {
+
+            
+//     midway_side_ovt_search_.resetLinearSearch(midway_side_ovt_search_.lin_search_min_, midway_side_ovt_search_.lin_search_max_);
+//         while( midway_side_ovt_search_.linearSearch(midway_side_ovt) & !maneuver_traj_succesful){      
+            
+       midway_side_ovt_search_.resetMidSearch(midway_side_ovt_search_.lin_search_min_, midway_side_ovt_search_.lin_search_max_);       
+        while( midway_side_ovt_search_.midSearch(midway_side_ovt) & !maneuver_traj_succesful){               
+            if(iside==1) // try to overtake on the right. Useful to come back to lane
+                midway_side_ovt = -1*midway_side_ovt;
                 
         // refpoint_goal_tf_refstart_coord.getOrigin().getX()*0.5
         temp_vector3 = tf::Vector3( refpoint_goal_tf_refstart_coord.getOrigin().getX()*0.3 + refpoint_tf_robot_coord.getOrigin().getX(), midway_side_ovt + refpoint_goal_tf_refstart_coord.getOrigin().getY(), 0.0);    
@@ -858,6 +869,9 @@ bool ManeuverPlanner::searchTrajectoryOvertakeManeuver(const tf::Stamped<tf::Pos
         
         
     }
+    if(maneuver_traj_succesful)
+        break;
+   }
   
 
     for (plan_iterator = plan_first_m_final.begin(); plan_iterator != plan_first_m_final.end(); plan_iterator++)
@@ -1177,8 +1191,17 @@ bool ManeuverPlanner::linePlanner(const geometry_msgs::PoseStamped& start,
     bool done = false;
     double scale = 0.0;
     double dScale = 0.05;
+    double xyMin = 0.05;
     double footprint_cost;
     bool traj_free = true;
+    double xydiff = hypot(diff_x,diff_y);
+    
+    if(xyMin < xydiff*dScale)
+    {
+        dScale = xyMin/xydiff;
+    }
+        
+    
     while(!done)
     {
         if(scale > 1.0)
@@ -1218,7 +1241,7 @@ bool ManeuverPlanner::linePlanner(const geometry_msgs::PoseStamped& start,
 
     }
     
-    dist_without_obstacles = scale*std::sqrt(diff_x*diff_x+diff_y*diff_y);
+    dist_without_obstacles = scale*xydiff;
     
     if(scale < 1.0)
     {
@@ -1444,6 +1467,7 @@ bool ManeuverPlanner::makePlanUntilPossible(const geometry_msgs::PoseStamped& st
     case ManeuverPlanner::MANEUVER_STRAIGHT_OTHERWISE_OVERTAKE :
         ROS_INFO("Try straight line, otherwise overtake"); 
         maneuver_traj_succesful = linePlanner(start, goal, plan, dist_without_obstacles);            
+         std::cout << "Maneuver Planner: dist_without_obstacles " << dist_without_obstacles << std::endl; 
         if( maneuver_traj_succesful == false && dist_without_obstacles < ( maxDistanceBeforeObstacle_ + maxDistanceBeforeReplanning_) )
         {                
             ROS_INFO("Did not work and obstacles are close: Try to plan Overtake maneuver"); 
@@ -1475,10 +1499,13 @@ bool ManeuverPlanner::makePlanUntilPossible(const geometry_msgs::PoseStamped& st
 
     if( maneuver_traj_succesful == false && maneuver_type != ManeuverPlanner::MANEUVER_STRAIGHT_OTHERWISE_OVERTAKE && dist_without_obstacles < ( maxDistanceBeforeObstacle_ + maxDistanceBeforeReplanning_) )
     {
-        ROS_WARN("Basic maneuvers did not work and obstacles are close, Try to plan Line or Overtake maneuver");
+        ROS_WARN("Basic maneuvers did not work and obstacles are close, Try to plan Line ... ");
+        plan.clear();
         maneuver_traj_succesful = linePlanner(start, goal, plan, dist_without_obstacles); 
-        if (maneuver_traj_succesful == false)
+         std::cout << "Maneuver Planner: dist_without_obstacles " << dist_without_obstacles << std::endl; 
+        if (maneuver_traj_succesful == false && dist_without_obstacles <  maxDistanceBeforeObstacle_)
         {
+             ROS_WARN("... or Overtake maneuver");
             refpoint_tf_robot_coord.frame_id_ = "/wholerobot_link";
             refpoint_tf_robot_coord.stamp_ = goal_tf.stamp_;
             temp_quat.setRPY(0.0,0.0,0.0);

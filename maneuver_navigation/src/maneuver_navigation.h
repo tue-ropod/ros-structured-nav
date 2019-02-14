@@ -80,6 +80,9 @@ private:
    bool initialized_;
    bool goal_free_;
    bool simple_goal_;
+   bool last_goal_as_start_;  
+   bool last_goal_valid_;
+   geometry_msgs::PoseStamped last_goal_;
    bool append_new_maneuver_;
    tf::TransformListener& tf_;   
    geometry_msgs::PoseStamped goal_;

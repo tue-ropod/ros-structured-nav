@@ -37,6 +37,9 @@
 #include <maneuver_planner/maneuver_planner.h>
 #include <pluginlib/class_list_macros.h>
 
+#define MIN_X_DIST_OVERTAKE 2.0
+#define MIN_THETA_OVERTAKE 10.0/180.0*M_PI
+
 //register this planner as a BaseGlobalPlanner plugin
 PLUGINLIB_EXPORT_CLASS(maneuver_planner::ManeuverPlanner, nav_core::BaseGlobalPlanner)
 
@@ -187,7 +190,7 @@ int  ManeuverPlanner::determineManeuverType(const tf::Stamped<tf::Pose>& pose_ta
     if( x_target >= 0.0) // Target in front of the robot        
     { 
         
-        if ( x_target >= ManeuverPlanner::MIN_X_DIST_OVERTAKE   &&   std::abs(theta_target)<= ManeuverPlanner::MIN_THETA_OVERTAKE  )
+        if ( x_target >= MIN_X_DIST_OVERTAKE   &&   std::abs(theta_target)<= MIN_THETA_OVERTAKE  )
         {
             maneuver_type = ManeuverPlanner::MANEUVER_STRAIGHT_OTHERWISE_OVERTAKE;
         }

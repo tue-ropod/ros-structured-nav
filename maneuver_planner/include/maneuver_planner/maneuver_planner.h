@@ -187,10 +187,6 @@ namespace maneuver_planner{
         MANEUVER_STRAIGHT_OTHERWISE_OVERTAKE,
       };	
       
-      static const double MIN_X_DIST_OVERTAKE = 2.0;
-      static const double MIN_THETA_OVERTAKE = 10.0/180.0*M_PI;
-      
-      
       bool initialized_;
       
       double maxDistanceBeforeObstacle_;

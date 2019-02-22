@@ -23,7 +23,7 @@
 #include <std_msgs/Bool.h>
 #include <stdlib.h> 
 
-float ropod_x = 0, ropod_y = 0, quaternion_x = 0, quaternion_y = 0, quaternion_z = 0, quaternion_w = 0, ropod_theta = 0, siny_cosp = 0, cosy_cosp = 0;
+double ropod_x = 0, ropod_y = 0, quaternion_x = 0, quaternion_y = 0, quaternion_z = 0, quaternion_w = 0, ropod_theta = 0, siny_cosp = 0, cosy_cosp = 0;
 double odom_xdot_ropod_global = 0, odom_ydot_ropod_global = 0, odom_thetadot_global = 0, odom_phi_global = 0, odom_vropod_global = 0;
 
 //std::vector<geometry_msgs::PoseStamped> global_path;
@@ -380,6 +380,8 @@ int main(int argc, char** argv)
         i = i+1;
 
         //ROS_INFO("Ropod x: %f / Ropod y: %f / Theta: %f", ropod_x, ropod_y, ropod_theta);
+        ROS_INFO("xdot: %f / ydot: %f / thetadot %f", odom_xdot_ropod_global, odom_ydot_ropod_global, odom_thetadot_global);
+        ROS_INFO("ropodx: %f / ropody: %f / ropodtheta %f", ropod_x, ropod_y, ropod_theta);
 
         while ((ropod_colliding_obs || ropod_colliding_wall) && k < MAX_K) 
         {

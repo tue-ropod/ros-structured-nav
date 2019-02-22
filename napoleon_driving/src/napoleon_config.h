@@ -46,13 +46,13 @@ static constexpr double V_INTER_ACC = 0.7;          // Max velocity [m/s] when d
 static constexpr double V_INTER_DEC = 0.3;          // Max velocity [m/s] when driving straight at intersection
 static constexpr double V_ENTRY = 0.5;              // Max velocity [m/s] when at entry of intersection
 static constexpr double V_STEERSATURATION = 0.2;    // Velocity during steering saturation
-vector<double> V_SCALE_OPTIONS = {0.3, 0.2, 0.1, 0.0}; //{1.0, 0.67, 0.33, 0.1, 0.0};  // Options to scale velocity with
+vector<double> V_SCALE_OPTIONS = {0.8, 0.6, 0.3, 0.2, 0.1, 0.0}; //{1.0, 0.67, 0.33, 0.1, 0.0};  // Options to scale velocity with
 int MAX_K = V_SCALE_OPTIONS.size();                 // Static not happy when populated this way, so nonstatic definition
 static constexpr double ENV_COR_WIDTH = 3.00;       
 // Fictional hallway width. Ropod will work with lanes of this/2 [m], starting from the wall. 
 // No matter what the real hallway size is. This way it will stay close to the right wall, but not too agressively.
 static constexpr double TUBE_WIDTH_C = ENV_COR_WIDTH/2; // Default tube width [m]
-static constexpr double REACHEDTARGETTRESHOLD = 1;  // When x [m] removed from center of last hallway, program finished
+static constexpr double REACHEDTARGETTRESHOLD = 1.0;  // When x [m] removed from center of last hallway, program finished
 
 // Performance based on position in environment
 static constexpr double START_STEERING_EARLY = 0.1;     // Start steering earlier by x [m]
@@ -64,7 +64,7 @@ static constexpr double DILATE_ROPOD_ALIGNING = 0.90;   // Dilation from center 
 static constexpr double SHARP_ANGLE_TRESHOLD = 0.1;     // Angle how much the next hallway must be sharper than perpendicular to be considered sharp [rad]
 
 // Limits
-static constexpr double A_MAX = 0.5;                    // Maximum acceleration magnitude [m/s^2]
+static constexpr double A_MAX = 1.0;                    // Maximum acceleration magnitude [m/s^2]
 
 // Obstacle
 static constexpr double V_OBS_OVERTAKE_MAX = 0.1;       // Max speed an obstacle can have to overtake is [m/s]

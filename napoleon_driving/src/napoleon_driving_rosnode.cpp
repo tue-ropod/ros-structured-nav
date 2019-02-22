@@ -24,7 +24,7 @@
 #include <stdlib.h> 
 
 double ropod_x = 0, ropod_y = 0, quaternion_x = 0, quaternion_y = 0, quaternion_z = 0, quaternion_w = 0, ropod_theta = 0, siny_cosp = 0, cosy_cosp = 0;
-double odom_xdot_ropod_global = 0, odom_ydot_ropod_global = 0, odom_thetadot_global = 0, odom_phi_global = 0, odom_vropod_global = 0;
+double odom_xdot_ropod_global = 0, odom_ydot_ropod_global = 0, odom_thetadot_global = 0, odom_phi_local = 0, odom_vropod_global = 0;
 
 //std::vector<geometry_msgs::PoseStamped> global_path;
 bool simple_goal_received = false;
@@ -67,8 +67,12 @@ void getOdomVelCallback(const nav_msgs::Odometry::ConstPtr& odom_vel)
     odom_xdot_ropod_global = odom_vel->twist.twist.linear.x;
     odom_ydot_ropod_global = odom_vel->twist.twist.linear.y;
     odom_thetadot_global = odom_vel->twist.twist.angular.z;
-    odom_phi_global = atan(D_AX/odom_xdot_ropod_global*odom_thetadot_global);
-    odom_vropod_global = odom_xdot_ropod_global/cos(odom_phi_global);
+    // In simulation (rmstart)
+    // odom_phi_global = atan(D_AX/odom_xdot_ropod_global*odom_thetadot_global);
+    // odom_vropod_global = odom_xdot_ropod_global/cos(odom_phi_global);
+    // On ropod 2 (r2start)
+    odom_phi_local = atan2(odom_ydot_ropod_global, odom_xdot_ropod_global);
+    odom_vropod_global = sqrt(odom_xdot_ropod_global*odom_xdot_ropod_global+odom_ydot_ropod_global*odom_ydot_ropod_global);
 }
 
 void getAmclPoseCallback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr& pose_msg)
@@ -399,12 +403,12 @@ int main(int argc, char** argv)
             // odom_xdot_ropod_global
             // odom_ydot_ropod_global
             // odom_thetadot_global
-            // odom_phi_global
+            // odom_phi_local
             // odom_vropod_global
             //ROS_INFO("xdot: %f \t ydot: %f", odom_xdot_ropod_global, odom_ydot_ropod_global);
 
             // Initialize prediction with latest sim values
-            pred_phi[0] = odom_phi_global;
+            pred_phi[0] = odom_phi_local;
             pred_theta[0] = ropod_theta;
             pred_v_ropod[0] = odom_vropod_global;
             pred_xdot[0] = pred_v_ropod[0]*cos(pred_phi[0])*cos(ropod_theta);   // xdot of rearaxle in global frame

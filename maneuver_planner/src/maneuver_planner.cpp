@@ -1285,6 +1285,20 @@ bool ManeuverPlanner::makePlan(const geometry_msgs::PoseStamped& start,
 }
 
 bool ManeuverPlanner::makePlan(const geometry_msgs::PoseStamped& start,
+                               const geometry_msgs::PoseStamped& goal, std::vector<geometry_msgs::PoseStamped>& plan, double & dist_without_obstacles, bool uselinePlanner)
+{
+    if(uselinePlanner)
+    {
+        return linePlanner(start, goal, plan, dist_without_obstacles);
+    }
+    else
+    {
+        return makePlanUntilPossible(start, goal, plan, dist_without_obstacles);
+    }
+    
+}
+
+bool ManeuverPlanner::makePlan(const geometry_msgs::PoseStamped& start,
                                const geometry_msgs::PoseStamped& goal, std::vector<geometry_msgs::PoseStamped>& plan)
 {
     double dist_without_obstacles;

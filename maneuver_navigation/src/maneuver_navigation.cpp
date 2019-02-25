@@ -134,7 +134,7 @@ bool ManeuverNavigation:: gotoGoal(const geometry_msgs::PoseStamped& goal)
     last_goal_valid_ =  true;
                 
     mn_goal_.conf.precise_goal = false;
-    mn_goal_.conf.use_line_planner = true;
+    mn_goal_.conf.use_line_planner = false;
     manv_nav_state_ = MANV_NAV_MAKE_INIT_PLAN;    
     local_nav_state_ = LOC_NAV_IDLE;
     return true; // TODO: implement
@@ -391,12 +391,12 @@ void ManeuverNavigation::callManeuverNavigationStateMachine()
                 old_plan.clear();
                 old_plan.insert(old_plan.begin(), plan.begin()+index_closest_to_pose, plan.begin()+index_before_obs);
                 start.pose.position = plan[index_before_obs].pose.position;
-                goal_free_ = maneuver_planner.makePlan(start,goal_, plan, dist_before_obs);
+                goal_free_ = maneuver_planner.makePlan(start,goal_, plan, dist_before_obs, mn_goal_.conf.use_line_planner);
                 plan.insert(plan.begin(),old_plan.begin(), old_plan.end());
             }
             else
             {
-                goal_free_ = maneuver_planner.makePlan(start,goal_, plan, dist_before_obs);            
+                goal_free_ = maneuver_planner.makePlan(start,goal_, plan, dist_before_obs, mn_goal_.conf.use_line_planner);
             }
             std::cout << "Navigation: dist_before_obs " << dist_before_obs << std::endl; 
             if( dist_before_obs > MAX_AHEAD_DIST_BEFORE_REPLANNING || goal_free_ == true)
@@ -465,7 +465,7 @@ void ManeuverNavigation::callManeuverNavigationStateMachine()
                 
                 tf::poseStampedTFToMsg(global_pose, start);       
                  std::cout <<  "Aproaching to end of temporary plan, distance " << dist_before_obs <<" m. Make new plan" << std::endl; 
-                goal_free_ = maneuver_planner.makePlan(start,goal_, plan, dist_before_obs);            
+                goal_free_ = maneuver_planner.makePlan(start,goal_, plan, dist_before_obs, mn_goal_.conf.use_line_planner);            
                 if( goal_free_ || dist_before_obs > MAX_AHEAD_DIST_BEFORE_REPLANNING )
                 {
                     if( plan.size()>0 )

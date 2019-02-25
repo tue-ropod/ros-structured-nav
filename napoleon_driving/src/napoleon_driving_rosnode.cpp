@@ -68,11 +68,11 @@ void getOdomVelCallback(const nav_msgs::Odometry::ConstPtr& odom_vel)
     odom_ydot_ropod_global = odom_vel->twist.twist.linear.y;
     odom_thetadot_global = odom_vel->twist.twist.angular.z;
     // In simulation (rmstart)
-    // odom_phi_global = atan(D_AX/odom_xdot_ropod_global*odom_thetadot_global);
-    // odom_vropod_global = odom_xdot_ropod_global/cos(odom_phi_global);
+    odom_phi_global = atan(D_AX/odom_xdot_ropod_global*odom_thetadot_global);
+    odom_vropod_global = odom_xdot_ropod_global/cos(odom_phi_global);
     // On ropod 2 (r2start)
-    odom_phi_local = atan2(odom_ydot_ropod_global, odom_xdot_ropod_global);
-    odom_vropod_global = sqrt(odom_xdot_ropod_global*odom_xdot_ropod_global+odom_ydot_ropod_global*odom_ydot_ropod_global);
+    // odom_phi_local = atan2(odom_ydot_ropod_global, odom_xdot_ropod_global);
+    // odom_vropod_global = sqrt(odom_xdot_ropod_global*odom_xdot_ropod_global+odom_ydot_ropod_global*odom_ydot_ropod_global);
 }
 
 void getAmclPoseCallback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr& pose_msg)

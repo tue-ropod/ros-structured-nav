@@ -57,8 +57,10 @@ double getSteeringTurn(Point local_pivot, bool dir_cw, Point local_wallpoint_fro
 double steerAroundPoint(Point local_pivot, bool dir_cw);
 double dist2(Point v, Point w);
 double distToSegmentSquared(Point p, Point v, Point w);
+double distToSegment(Point p, PointID v, PointID w);
 double distToSegment(Point p, Point v, Point w);
 bool do_lines_intersect(Point p0, Point p1, Point p2, Point p3);
+bool do_shapes_overlap(Point obj1p0, Point obj1p1, Point obj1p2, Point obj1p3, Point obj2p0, Point obj2p1, Point obj2p2, Point obj2p3);
 bool do_shapes_overlap(double shape1[][2], double shape2[][2]);
 bool does_line_intersect_shape(Point p0, Point p1, double shape[][2]);
 bool doesShapeCollideWithCircle(double shape[][2], Point c, double r);

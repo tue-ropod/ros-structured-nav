@@ -75,7 +75,16 @@
         <rosparam file="$(find ropod_navigation_test)/config/parameters/local_costmap_params.yaml"  command="load"/>    
         <rosparam file="$(find ropod_navigation_test)/config/parameters/base_local_planner_params.yaml" command="load" />
                     
-    </node>-->    
+    </node>-->
+
+    <!-- start ED -->
+    <node pkg="ed" type="ed" name="ed" args="$(find ropod_navigation_test)/config/model-test-napoleon-driving-ED.yaml">
+	<param name="move_base_server" value="move_base" />
+	<param name="move_base_feedback_topic" value="/move_base/feedback" />
+	<param name="move_base_cancel_topic" value="/move_base/cancel" />
+	<remap from="~goto_action" to="/ropod_task_executor/GOTO" />
+    </node>
+    <!-- end ED -->  
     
     <node name="napoleon_driving" pkg="napoleon_driving" type="napoleon_driving" output="screen">
      

@@ -354,6 +354,13 @@ double steerAroundPoint(Point local_pivot, bool dir_cw) {
 	return phi;
 }
 
+double distToSegment(Point p, PointID v, PointID w) {
+    // P point, v, w points of line segmens
+	Point v_noid(v.x,v.y);
+	Point w_noid(w.x,w.y);
+    return sqrt(distToSegmentSquared(p, v_noid, w_noid));
+}
+
 double distToSegment(Point p, Point v, Point w) {
     // P point, v, w points of line segmens
     return sqrt(distToSegmentSquared(p, v, w));
@@ -390,6 +397,122 @@ bool do_lines_intersect(Point p0, Point p1, Point p2, Point p3) {
 	} else {
         return false; // No intersection
 	}
+}
+
+bool do_shapes_overlap(Point obj1p0, Point obj1p1, Point obj1p2, Point obj1p3, Point obj2p0, Point obj2p1, Point obj2p2, Point obj2p3) {
+    // Returns 1 if shapes overlap, 0 otherwise
+    // Shapes have to be defined as [x1, y1; x2, y2, etc]
+    // where the points represent the corners of the shape.
+    // This method assumed that the shapes are closed.
+	// PS: this is very very ugly code. Sorry for your eyes & brain. Time pressure at the end of projects...
+	// double shape1[4][2] {{obj1p0.x, obj1p0.y}, {obj1p1.x, obj1p1.y}, {obj1p2.x, obj1p2.y}, {obj1p3.x, obj1p3.y}};
+	// double shape2[4][2] {{obj2p0.x, obj2p0.y}, {obj2p1.x, obj2p1.y}, {obj2p2.x, obj2p2.y}, {obj2p3.x, obj2p3.y}};
+	vector<Point> sh1 {obj1p0, obj1p1, obj1p2, obj1p3};
+	vector<Point> sh2 {obj2p0, obj2p1, obj2p2, obj2p3};
+    bool colliding = false;
+	bool inter = false;
+	int pnxt, qnxt;
+	int shape1size = 4; // Only working for rectangles for now
+	int shape2size = 4; // Only working for rectangles for now
+	Point p0, p1, p2, p3;
+    // For all lines of shape 1
+    for (int q = 0; q < shape1size; ++q) {
+        qnxt = q+1;
+		if (qnxt > shape1size-1) { qnxt = 0; }
+        p0 = sh1[q]; p1 = sh1[qnxt];
+        //p0.x = shape1[q][0]; p0.y = shape1[q][1];
+		//p1.x = shape1[qnxt][0]; p1.y = shape1[qnxt][1];
+
+        // Check if they intersect with all lines of shape 2
+        for (int p = 0; p < shape2size; ++p) {
+			pnxt = p+1;
+            if (pnxt > shape2size-1) { pnxt = 0; }
+			p2 = sh2[p]; p3 = sh2[pnxt];
+            //p2.x = shape2[p][0]; p2.y = shape2[p][1];
+            //p3.x = shape2[pnxt][0]; p3.y = shape2[pnxt][1];
+
+            inter = do_lines_intersect(p0, p1, p2, p3);
+            if (inter) {
+                colliding = true;
+			}
+		}
+    }
+    
+    // Check special case where one shape encloses the other
+    // Check is performed with ray casting, background:
+    // https://en.wikipedia.org/wiki/Point_in_polygon
+    // https://stackoverflow.com/questions/217578/how-can-i-determine-whether-a-2d-point-is-within-a-polygon
+    // if (colliding) {
+    //     double e = 0.1; // Padding for ray casting [m]
+    //     bool c1 = false, c2 = false; // Keep track of inside or outside
+    //     double s1p1x = obj1p0.x;
+    //     double s1p1y = obj1p0.y;
+    //     double s2p1x = obj2p0.x;
+    //     double s2p1y = obj2p0.y;
+	// 	double s1xmin = 99.9;
+	// 	double s2xmin = 99.9;
+	// 	// C++ doesn't have an operator to get a column, so getting the minimum value this way...
+	// 	for (int minc = 0; minc < shape1size; ++minc) {
+	// 		double curval = shape1[minc][0];
+    //     	if (curval < s1xmin) {
+	// 			s1xmin = curval;
+	// 		}
+	// 	}
+	// 	for (int minc = 0; minc < shape2size; ++minc) {
+	// 		double curval = shape2[minc][0];
+    //     	if (curval < s2xmin) {
+	// 			s2xmin = curval;
+	// 		}
+	// 	}
+    //     double ray_s1[4] = {s1xmin-e, s2p1y, s2p1x, s2p1y};
+    //     // double r1_p2_x = ray_s1[0];
+    //     // double r1_p2_y = ray_s1[1];
+    //     // double r1_p3_x = ray_s1[2];
+    //     // double r1_p3_y = ray_s1[3];
+	// 	Point r1p2(ray_s1[0],ray_s1[1]);
+	// 	Point r1p3(ray_s1[2],ray_s1[3]);
+    //     double ray_s2[4] = {s2xmin-e, s1p1y, s1p1x, s1p1y};
+    //     // double r2_p2_x = ray_s2[0];
+    //     // double r2_p2_y = ray_s2[1];
+    //     // double r2_p3_x = ray_s2[2];
+    //     // double r2_p3_y = ray_s2[3];
+	// 	Point r2p2(ray_s2[0],ray_s2[1]);
+	// 	Point r2p3(ray_s2[2],ray_s2[3]);
+    //     for (int q = 0; q < shape1size; ++q) {
+	// 		int qnxt = q+1;
+    //         if (q+1 > shape1size-1) { qnxt = 0; }
+    //         // double p0_x = shape1[q,1];
+    //         // double p0_y = shape1[q,2];
+	// 		Point p0(shape1[q][0],shape1[q][1]);
+	// 		Point p1(shape1[qnxt][0],shape1[qnxt][1]);
+    //         // double p1_x = shape1[qnxt,1];
+    //         // double p1_y = shape1[qnxt,2];
+    //         bool inter = do_lines_intersect(p0, p1, r1p2, r1p3);
+    //         if (inter) {
+    //             c1 = !c1; // If c1 was 0, it becomes 1, if c1 was 1 it becomes 0
+    //         }
+	// 	}
+    //     for (int p = 0; p < shape2size-1; ++p) {
+    //         int pnxt = p+1;
+    //         if (p+1 > shape2size) { int pnxt = 0; }
+	// 		Point p0(shape2[p][0],shape2[p][1]);
+	// 		Point p1(shape2[pnxt][0],shape2[pnxt][1]);
+    //         // double p0_x = shape2[p,1];
+    //         // double p0_y = shape2[p,2];
+    //         // double p1_x = shape2[pnxt,1];
+    //         // double p1_y = shape2[pnxt,2];
+    //         bool inter = do_lines_intersect(p0, p1, r2p2, r2p3);
+    //         if (inter) {
+    //             c2 = !c2; // If c2 was 0, it becomes 1, if c2 was 1 it becomes 0
+    //             //disp('Shape 1 lies completely in shape 2');
+	// 		}
+	// 	}
+    //     if (c1 || c2) { // If c1 or c2 is true, then one shape lies within the other
+    //         colliding = true;
+    //         // disp('SHAPES ENCLOSED EACH OTHER WHOO');
+	// 	}
+	// }
+	return colliding;
 }
 
 bool do_shapes_overlap(double shape1[][2], double shape2[][2]) {
@@ -546,6 +669,7 @@ AreaQuad generateEntry(int hallwayID, int interID, double e_length, vector<AreaQ
     AreaQuadID HALLWAY_OBJ = getAreaByID(hallwayID,arealist);
     AreaQuadID INTER_OBJ = getAreaByID(interID,arealist);
     vector<string> wall {getWallPointsTowardsB(HALLWAY_OBJ,INTER_OBJ)};
+	vector<string> leftwall {getWallPointsAwayFromB(HALLWAY_OBJ,INTER_OBJ)};
     // Hallway end are the two points connected to the intersection
 	vector<string> HALLWAY_end {getCommonPoints(HALLWAY_OBJ,INTER_OBJ)};
     vector<string> HALLWAY_points = HALLWAY_OBJ.getPointIDs();
@@ -561,20 +685,25 @@ AreaQuad generateEntry(int hallwayID, int interID, double e_length, vector<AreaQ
 		}
 	}
     vector<string> HALLWAY_start {HALLWAY_points[indices[0]], HALLWAY_points[indices[1]]};
-    PointID s1 = getPointByID(HALLWAY_start[0], pointlist);
-    PointID s2 = getPointByID(HALLWAY_start[1], pointlist);
-    PointID e1 = getPointByID(HALLWAY_end[0], pointlist);
-    PointID e2 = getPointByID(HALLWAY_end[1], pointlist);
+    // PointID s1 = getPointByID(HALLWAY_start[0], pointlist);
+    // PointID s2 = getPointByID(HALLWAY_start[1], pointlist);
+    // PointID e1 = getPointByID(HALLWAY_end[0], pointlist);
+    // PointID e2 = getPointByID(HALLWAY_end[1], pointlist);
     PointID s_wall = getPointByID(wall[0], pointlist);
     PointID e_wall = getPointByID(wall[1], pointlist);
+	PointID s_leftwall = getPointByID(leftwall[1], pointlist);
+	PointID e_leftwall = getPointByID(leftwall[0], pointlist);
+	Point s_wall_idless(s_wall.x, s_wall.y);
 	Point e_wall_idless(e_wall.x, e_wall.y);
-    Point s_mid((s1.x+s2.x)/2, (s1.y+s2.y)/2);
-    Point e_mid((e1.x+e2.x)/2, (e1.y+e2.y)/2);
+	Point s_leftwall_idless(s_leftwall.x, s_leftwall.y);
+	Point e_leftwall_idless(e_leftwall.x, e_leftwall.y);
+    // Point s_mid((s1.x+s2.x)/2, (s1.y+s2.y)/2);
+    // Point e_mid((e1.x+e2.x)/2, (e1.y+e2.y)/2);
     double wall_angle = atan2(e_wall.y-s_wall.y,e_wall.x-s_wall.x);
-    double mid_angle = atan2(e_mid.y-s_mid.y,e_mid.x-s_mid.x);
-    Point start_entry_mid(e_mid.x-e_length*cos(mid_angle), e_mid.y-e_length*sin(mid_angle));
+    double leftwall_angle = atan2(e_leftwall.y-s_leftwall.y,e_leftwall.x-s_leftwall.x);
+    Point start_entry_leftwall(e_leftwall.x-e_length*cos(leftwall_angle), e_leftwall.y-e_length*sin(leftwall_angle));
     Point start_entry_wall(e_wall.x-e_length*cos(wall_angle), e_wall.y-e_length*sin(wall_angle));
-    AreaQuad entry(start_entry_wall, e_wall_idless, e_mid, start_entry_mid);
+    AreaQuad entry(start_entry_wall, e_wall_idless, e_leftwall_idless, start_entry_leftwall);
 	return entry;
 }
 
@@ -870,7 +999,7 @@ double getSteeringTurnSharp(Point ropodpos, double ropod_angle, bool dir_cw, arr
 
     double obj2wall_angle = atan2(obj2wall_p1.y-obj2wall_p0.y, obj2wall_p1.x-obj2wall_p0.x);
     double obj3wall_angle = atan2(obj3wall_p1.y-obj3wall_p0.y, obj3wall_p1.x-obj3wall_p0.x);
-    ROS_INFO("Sharp steering obj2ang: %f / obj3ang: %f", obj2wall_angle, obj3wall_angle);
+    // ROS_INFO("Sharp steering obj2ang: %f / obj3ang: %f", obj2wall_angle, obj3wall_angle);
     PointID pivot = getPointByID(task[4],pointlist);
 
     // Determine steering around point

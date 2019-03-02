@@ -14,6 +14,8 @@
 #include "napoleon_config.h"
 #include <algorithm>    // std::rotate
 #include <visualization_msgs/Marker.h>
+#include <fstream>
+#include <ctime>
 
 #include <ed_gui_server/objPosVel.h>
 #include <ed_gui_server/objsPosVel.h>
@@ -32,6 +34,7 @@ int no_obs = 0;
 ed_gui_server::objPosVel current_obstacle;
 double obs_theta;
 Point obs_center_global;
+double program_duration = 0, real_time_est = 0;
 
 //std::vector<geometry_msgs::PoseStamped> global_path;
 bool simple_goal_received = false;
@@ -420,6 +423,15 @@ int main(int argc, char** argv)
 
     AreaQuad current_entry = generateEntry(assignment[0], assignment[1], ENTRY_LENGTH, arealist, pointlist);
 
+    std::ofstream myfile;
+    myfile.open ("/simdata/ropod_" + get_date() +".txt");
+    myfile << "time" << "\t" << "tictoc" << "\t" << "state" << "\t" << "task counter" << "\t" << "tube width" << "\t" << 
+            "phi des" << "\t" << "v ropod" << "\t" << "x ropod" << "\t" << "y ropod" << "\t" << 
+            "theta ropod" << "\t" "x obs" << "\t" << "y obs" << "\t" << "theta obs" << "\t" << "obs width" << "\t" << 
+            "obs depth" << "\t" << "obs vx" << "\t" << "obs vy" << "\t" << "des accel" <<"\n";
+
+    std::clock_t start_loop;
+
     while(nroshndl.ok() && !ropod_reached_target)
     {
         
@@ -430,6 +442,8 @@ int main(int argc, char** argv)
         if (simple_goal_received)
         {
         
+        start_loop = std::clock();
+
         ropod_colliding_obs = true;     // Initially set to true
         ropod_colliding_wall = true;    // Initially set to true
         // bool predict_intersection_time = true; // (not used in c++)
@@ -1176,10 +1190,16 @@ int main(int argc, char** argv)
         prev_sim_task_counter = pred_task_counter[1];
         prev_sim_phi_des = pred_phi_des[1];
         prev_sim_tube_width = pred_tube_width[1];
+        program_duration = ( std::clock() - start_loop ) / (double) CLOCKS_PER_SEC;
+        real_time_est = real_time_est+local_navigation_period;
 
         // Compute v_ax and theta_dot from v_des and phi
         //ROS_INFO("Phi: %f / V_ax: %f / Theta_dot: %f", pred_phi_des[1], v_ax, theta_dot);
         ROS_INFO("state: %d, tube width: %f", pred_state[1], pred_tube_width[1]);
+        myfile << real_time_est << "\t" << program_duration << "\t" << pred_state[0] << "\t" << pred_task_counter[0] << "\t" << pred_tube_width[0] << "\t" << 
+            pred_phi_des[0] << "\t" << pred_v_ropod[0] << "\t" <<  pred_xy_ropod[0].x << "\t" <<  pred_xy_ropod[0].y << "\t" << 
+            pred_plan_theta[0] << "\t" << pred_x_obs[0] << "\t" << pred_y_obs[0] << "\t" << obs_theta << "\t" << current_obstacle.width << "\t" << 
+            current_obstacle.depth << "\t" << current_obstacle.vel.x << "\t" << current_obstacle.vel.y << "\t" << pred_accel[1] << "\t" <<"\n";
         //ROS_INFO("K: %d", k);
         //ROS_INFO("V desired: %f", pred_v_ropod_plan[1]);
         //ROS_INFO("Predphi[1]: %f / [2]: %f / [3]: %f / [4]: %f", pred_phi_des[1], pred_phi_des[2], pred_phi_des[3], pred_phi_des[4]);
@@ -1248,5 +1268,7 @@ int main(int argc, char** argv)
     }
     // Will only perform this when ropod has reached target
     napoleon_driving.publishZeroVelocity();
+    myfile.close();
+
     return 0;
 }

@@ -6,6 +6,8 @@
 #include <ros/ros.h>
 #include <algorithm>    // std::rotate
 using namespace std;
+#include <time.h>
+#define MAX_DATE 12
 
 // For all points except map points
 Point::Point(double xval = 0.0, double yval = 0.0) {
@@ -1183,4 +1185,20 @@ double modf(double x, double y) {
 
 template <typename T> int sgn(T val) {
     return (T(0) < val) - (val < T(0));
+}
+
+string get_date(void) {
+   time_t now;
+   char the_date[MAX_DATE];
+
+   the_date[0] = '\0';
+
+   now = time(NULL);
+
+   if (now != -1)
+   {
+      strftime(the_date, MAX_DATE, "%m_%d-%H_%M", gmtime(&now));
+   }
+
+   return string(the_date);
 }

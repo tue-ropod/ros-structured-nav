@@ -76,4 +76,5 @@ double getSteeringTurnSharp(Point ropodpos, double ropod_angle, bool dir_cw, arr
 double wrapToPi(double angle);
 double modf(double x, double y);
 template <typename T> int sgn(T val);
+string get_date(void);
 #endif

@@ -270,14 +270,14 @@ double getSteeringTurn(Point local_pivot, bool dir_cw, Point local_wallpoint_fro
     // dir_cw: direction 0 = CCW, 1 = CW rotation
 
     // Feelers in front of the ropod
-    Point local_lt(ROPOD_LENGTH/2,SIZE_SIDE);
+    Point local_lt(ROPOD_LENGTH/2, SIZE_SIDE);
 	Point local_rt(ROPOD_LENGTH/2,-SIZE_SIDE);
 	Point origin(0,0);
 	double dist = 0, phi = 0, to_middle_size = 0;
     
     double phi_0 = steerAroundPoint(local_pivot, dir_cw);
 	Point local_fl(FEELER_SIZE*cos(phi_0),FEELER_SIZE*sin(phi_0));
-	Point local_fr = local_fl;
+	Point local_fr(FEELER_SIZE*cos(phi_0),FEELER_SIZE*sin(phi_0));
 	local_fl = local_fl.add(local_lt);
 	local_fr = local_fr.add(local_rt);
     
@@ -289,26 +289,27 @@ double getSteeringTurn(Point local_pivot, bool dir_cw, Point local_wallpoint_fro
     Point fr_env_0 = rotate_point(origin, -local_wall_angle, local_fr);   	// Feeler right @ env at theta = 0
     //Point rb_env_0 = rotate_point(origin, -local_wall_angle, local_wallpoint_rear);   // Wall at right side @ env at theta = 0
     double dist_right = fr_env_0.y-rb_env_0.y;  // Y distance from feeler right to the wall (neg if beyond wall)
-
     double dist_ropod_center_to_wall = -rb_env_0.y;      // Y distance from ropod center to right wall
 
-    if (dir_cw) { // dir == 1
+    if (dir_cw) { // CW
         // Follow left wall if too close to wall when turning right
         // to_middle_size = dist_ropod_center_to_wall-tubewidth/2;
-		to_middle_size = FOLLOW_WALL_DIST_TURNING-dist_ropod_center_to_wall;
-    } else {
-		// 0 = CCW, 1 = CW rotation
-        // Follow right wall if too close to wall when turning left
 		to_middle_size = dist_ropod_center_to_wall-FOLLOW_WALL_DIST_TURNING;
+		//to_middle_size = FOLLOW_WALL_DIST_TURNING-dist_ropod_center_to_wall;
+    } else { //CCW
+        // Follow right wall if too close to wall when turning left
+		//to_middle_size = dist_ropod_center_to_wall-FOLLOW_WALL_DIST_TURNING;
+		to_middle_size = FOLLOW_WALL_DIST_TURNING-dist_ropod_center_to_wall;
         // to_middle_size = tubewidth/2-dist_ropod_center_to_wall;
 	}
 	Point to_middle_vec(to_middle_size*-sin(local_wall_angle),to_middle_size*cos(local_wall_angle));
     Point to_front_vec(CARROT_LENGTH*cos(local_wall_angle), CARROT_LENGTH*sin(local_wall_angle));  // Vector from middle of road to a point further on the road
-    Point steer_vec = to_front_vec;
-	steer_vec = steer_vec.add(to_middle_vec); // Together, these vectors form the steering vector
+    Point steer_vec(to_front_vec.x + to_middle_vec.x, to_front_vec.y + to_middle_vec.y);
+	//steer_vec = steer_vec.add(to_middle_vec); // Together, these vectors form the steering vector
 
     if (dir_cw) { 	// CW, left side of ropod will be closest to wall
         dist = dist_left;
+		
 	} else {       	// CCW, right side of ropod will be closest to wall
         dist = dist_right;
 	}
@@ -320,14 +321,16 @@ double getSteeringTurn(Point local_pivot, bool dir_cw, Point local_wallpoint_fro
     double phi_tctw = atan2(steer_vec.y,steer_vec.x); // Determine the angle of this steering vector
 
     if (dist < ENV_TCTW_SIZE) {
-        //disp('Ropod is too close to wall, steer back to middle');
+        //ROS_INFO("Ropod is too close to wall, steer back to middle");
         phi = phi_tctw;
+		//ROS_INFO("to_middle_size: %f", to_middle_size);
+		//ROS_INFO("dist left: %f", dist_left);
 	} else if (dist < ENV_TCTW_SIZE+ENV_TRNS_SIZE) {
-        //disp('Ropod is in transition zone at the wall');
+        //ROS_INFO("Ropod is in transition zone at the wall");
         double frac_in_trans = 1-(dist-ENV_TCTW_SIZE)/ENV_TRNS_SIZE;
         phi = frac_in_trans*phi_tctw+(1-frac_in_trans)*phi_0;
 	} else {
-        //disp('Ropod is steering without collision predicted');
+        //ROS_INFO("Ropod is steering without collision predicted");
         phi = phi_0;
 	}
 	return phi;

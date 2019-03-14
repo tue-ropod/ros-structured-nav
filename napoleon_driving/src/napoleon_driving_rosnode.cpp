@@ -118,6 +118,7 @@ void getOdomVelCallback(const nav_msgs::Odometry::ConstPtr& odom_vel)
     // rstart
     odom_phi_local = atan2(odom_ydot_ropod_global, odom_xdot_ropod_global);
     odom_vropod_global = sqrt(odom_xdot_ropod_global*odom_xdot_ropod_global+odom_ydot_ropod_global*odom_ydot_ropod_global);
+    //ROS_INFO("xdot: %f, ydot: %f, vabs: %f", odom_xdot_ropod_global, odom_ydot_ropod_global, odom_vropod_global);
 }
 
 void getAmclPoseCallback(const geometry_msgs::PoseWithCovarianceStamped::ConstPtr& pose_msg)
@@ -148,9 +149,15 @@ int main(int argc, char** argv)
     std::string default_ropod_navigation_param_file;
     std::string default_ropod_load_navigation_param_file;
 
-    // Initialize environment
+    // Initialize environment (turn left)
+    // PointID A(11.12,-1.66,"A"), B(13.04,7.06,"B"), C(3.94,9.23,"C"), D(1.85,0.49,"D"),
+    //         E(9.33,1.00,"E"), F(10.35,5.41,"F"), G(5.87,6.93,"G"), H(4.72,2.11,"H"),
+    //         K(8.89,-1.3,"K"), L(11.62,0.42,"L"), M(12.66,4.85,"M"), N(10.93,7.76,"N"),
+    //         P(6.32,8.78,"P"), Q(3.38,7.46,"Q"), R(2.25,2.76,"R"), S(4.05,-0.13,"S");
+
+    // Initialize environment (turn right)
     PointID A(11.12,-1.66,"A"), B(13.04,7.06,"B"), C(3.94,9.23,"C"), D(1.85,0.49,"D"),
-            E(9.33,1.00,"E"), F(10.35,5.41,"F"), G(5.87,6.93,"G"), H(4.72,2.11,"H"),
+            E(9.27,0.70,"E"), F(10.45,5.65,"F"), G(5.77,6.98,"G"), H(4.60,1.81,"H"),
             K(8.89,-1.3,"K"), L(11.62,0.42,"L"), M(12.66,4.85,"M"), N(10.93,7.76,"N"),
             P(6.32,8.78,"P"), Q(3.38,7.46,"Q"), R(2.25,2.76,"R"), S(4.05,-0.13,"S");
 
@@ -163,6 +170,7 @@ int main(int argc, char** argv)
     std::vector<AreaQuadID> arealist {area44, area45, area46, area47, area48, area49, area50, area51};
 
     int assignment[] = {50,51,44,45,46,47,48,49,50};
+    //int assignment[] = {50,49,48,47,46,45,44,51,50}; // reversed (right turns)
 
     nroshndl.param<double>("prediction_feasibility_check_rate", prediction_feasibility_check_rate, 3.0);    
     nroshndl.param<double>("local_navigation_rate", local_navigation_rate, 10.0); // local_navigation_rate>prediction_feasibility_check_rate    
@@ -182,7 +190,7 @@ int main(int argc, char** argv)
     ros::Subscriber cancel_cmd_sub = nroshndl.subscribe<std_msgs::Bool>("/route_navigation/cancel", 10, cancelCallback);
     ros::Subscriber reinit_planner_sub = nroshndl.subscribe<std_msgs::Bool>("/route_navigation/set_load_attached", 10, loadAttachedCallback);
     ros::Subscriber amcl_pose_sub = nroshndl.subscribe<geometry_msgs::PoseWithCovarianceStamped>("/amcl_pose", 10, getAmclPoseCallback);
-    ros::Subscriber ropod_odom_sub = nroshndl.subscribe<nav_msgs::Odometry>("/ropod/odom", 10, getOdomVelCallback);
+    ros::Subscriber ropod_odom_sub = nroshndl.subscribe<nav_msgs::Odometry>("/ropod/odom", 100, getOdomVelCallback);
     ros::Subscriber obstacle_sub = nroshndl.subscribe<ed_gui_server::objsPosVel>("/ed/gui/objectPosVel", 10, getObstaclesCallback);
     //ros::Publisher  reinit_localcostmap_footprint_sub = nroshndl.advertise<geometry_msgs::Polygon>("/napoleon_driving/local_costmap/footprint", 1);
     ros::Publisher goal_visualisation_pub_ = nroshndl.advertise<geometry_msgs::PoseStamped>("/napoleon_driving/goal_rviz", 1);
@@ -228,6 +236,7 @@ int main(int argc, char** argv)
     
     // Initial values, not very important as long as ropod is in the right area
     // First action will be determined by the initial values (or I can just wait?)
+    double control_v = 0;
     double theta_0 = -M_PI/2;     // Initial orientation of ropod [rad]
     double x_ropod_0 = 4.4;	    // X position of center of ropod [m]
     double y_ropod_0 = 8.8;     // Y position of center of ropod [m]
@@ -304,7 +313,8 @@ int main(int argc, char** argv)
     int danger_count = 0; // Counter that ensures program stops if collision with wall predicted for sometime
 
     // Constants during simulation
-    double delta_t = 1/(double)F_PLAN;                      // Time ropod will execute this plan
+    //double delta_t = 1/(double)F_PLAN;                      // Time ropod will execute this plan
+    double delta_t = local_navigation_period;
     double max_delta_v = A_MAX*delta_t;             // Maximum change in v in delta_t
     double lpf = 2*M_PI*TS*CUTOFF_FREQ;             // Low pass filter [-]
     if (lpf > 1) {
@@ -424,9 +434,10 @@ int main(int argc, char** argv)
     AreaQuad current_entry = generateEntry(assignment[0], assignment[1], ENTRY_LENGTH, arealist, pointlist);
 
     std::ofstream myfile;
-    myfile.open ("/simdata/ropod_" + get_date() +".txt");
+    //myfile.open ("/simdata/ropod_" + get_date() +".txt");
+    myfile.open ("/home/melvin/simdata/ropod_" + get_date() +".txt");
     myfile << "time" << "\t" << "tictoc" << "\t" << "state" << "\t" << "task counter" << "\t" << "tube width" << "\t" << 
-            "phi des" << "\t" << "v ropod" << "\t" << "x ropod" << "\t" << "y ropod" << "\t" << 
+            "phi des" << "\t" << "v ropod odom" << "\t"<< "v ropod cmd" << "\t" << "x ropod" << "\t" << "y ropod" << "\t" << 
             "theta ropod" << "\t" "x obs" << "\t" << "y obs" << "\t" << "theta obs" << "\t" << "obs width" << "\t" << 
             "obs depth" << "\t" << "obs vx" << "\t" << "obs vy" << "\t" << "des accel" <<"\n";
 
@@ -476,8 +487,8 @@ int main(int argc, char** argv)
             //ROS_INFO("xdot: %f \t ydot: %f", odom_xdot_ropod_global, odom_ydot_ropod_global);
 
             // Initialize prediction with latest sim values
-            // pred_phi[0] = odom_phi_local; // On ropod
-            pred_phi[0] = odom_phi_global-ropod_theta; // In sim
+            pred_phi[0] = odom_phi_local; // On ropod
+            // pred_phi[0] = odom_phi_global-ropod_theta; // In sim (rmstart)
             pred_theta[0] = ropod_theta;
             pred_v_ropod[0] = odom_vropod_global;
             pred_xdot[0] = pred_v_ropod[0]*cos(pred_phi[0])*cos(ropod_theta);   // xdot of rearaxle in global frame
@@ -1158,6 +1169,11 @@ int main(int argc, char** argv)
                 pred_xy_ropod[j].x = pred_x_ropod[j];
                 pred_xy_ropod[j].y = pred_y_ropod[j];
                 pred_v_ropod_plan[j] = pred_v_ropod[m];
+            
+                if (j == 1) {
+                    //ROS_INFO("v[0] = %f, a[1] = %f, ts = %f, v[1] = %f", pred_v_ropod[0], pred_accel[j], TS, pred_v_ropod_plan[j]);
+                    ROS_INFO("v[0] = %f, a[1] = %f, deltav = %f, v[1] = %f", pred_v_ropod[0], pred_accel[j], pred_accel[j]*local_navigation_period, pred_v_ropod[0]+pred_accel[1]*local_navigation_period);
+                }
                 pred_plan_theta[j] = pred_theta[m];
                 //ROS_INFO("j: %d / State: %d / Time: %f / Phi: %f / V_des: %f", j, pred_state[j], t_pred_j[j], pred_phi_des[j], pred_v_ropod[j]);
 
@@ -1193,26 +1209,35 @@ int main(int argc, char** argv)
         program_duration = ( std::clock() - start_loop ) / (double) CLOCKS_PER_SEC;
         real_time_est = real_time_est+local_navigation_period;
 
+        control_v = pred_v_ropod[0]+pred_accel[1]*local_navigation_period;
         // Compute v_ax and theta_dot from v_des and phi
         //ROS_INFO("Phi: %f / V_ax: %f / Theta_dot: %f", pred_phi_des[1], v_ax, theta_dot);
         ROS_INFO("state: %d, tube width: %f", pred_state[1], pred_tube_width[1]);
         myfile << real_time_est << "\t" << program_duration << "\t" << pred_state[0] << "\t" << pred_task_counter[0] << "\t" << pred_tube_width[0] << "\t" << 
-            pred_phi_des[0] << "\t" << pred_v_ropod[0] << "\t" <<  pred_xy_ropod[0].x << "\t" <<  pred_xy_ropod[0].y << "\t" << 
+            pred_phi_des[0] << "\t" << pred_v_ropod[0] << "\t" << control_v << "\t"  <<  pred_xy_ropod[0].x << "\t" <<  pred_xy_ropod[0].y << "\t" << 
             pred_plan_theta[0] << "\t" << pred_x_obs[0] << "\t" << pred_y_obs[0] << "\t" << obs_theta << "\t" << current_obstacle.width << "\t" << 
             current_obstacle.depth << "\t" << current_obstacle.vel.x << "\t" << current_obstacle.vel.y << "\t" << pred_accel[1] << "\t" <<"\n";
         //ROS_INFO("K: %d", k);
         //ROS_INFO("V desired: %f", pred_v_ropod_plan[1]);
         //ROS_INFO("Predphi[1]: %f / [2]: %f / [3]: %f / [4]: %f", pred_phi_des[1], pred_phi_des[2], pred_phi_des[3], pred_phi_des[4]);
-        if (pred_v_ropod_plan[1] > 0) {
-            v_ax = cos(pred_phi_des[1])*pred_v_ropod_plan[1];
-            theta_dot = pred_v_ropod_plan[1]/D_AX*sin(pred_phi_des[1]);
+        
+        // if (pred_v_ropod_plan[1] > 0) {
+        //     v_ax = cos(pred_phi_des[1])*pred_v_ropod_plan[1];
+        //     theta_dot = pred_v_ropod_plan[1]/D_AX*sin(pred_phi_des[1]);
+        //     napoleon_driving.publishCustomVelocity(v_ax, theta_dot);
+        // } else {
+        //     napoleon_driving.publishZeroVelocity();
+        // }
+        if (control_v > 0) {
+            v_ax = cos(pred_phi_des[1])*control_v;
+            theta_dot = control_v/D_AX*sin(pred_phi_des[1]);
             napoleon_driving.publishCustomVelocity(v_ax, theta_dot);
         } else {
             napoleon_driving.publishZeroVelocity();
         }
-        
+
         OBJ_LAST_center = OBJ_LAST.center();
-        dist_to_middle_final = sqrt((OBJ_LAST_center.x-pred_x_ropod[1])*(OBJ_LAST_center.x-pred_x_ropod[1])+(OBJ_LAST_center.y-pred_y_ropod[1])*(OBJ_LAST_center.y-pred_y_ropod[1]));
+        dist_to_middle_final = sqrt((OBJ_LAST_center.x-pred_x_rearax[1])*(OBJ_LAST_center.x-pred_x_rearax[1])+(OBJ_LAST_center.y-pred_y_rearax[1])*(OBJ_LAST_center.y-pred_y_rearax[1]));
 
         if (prev_sim_task_counter == ka_max-1 && dist_to_middle_final < REACHEDTARGETTRESHOLD) {
             ropod_reached_target = true;
@@ -1258,7 +1283,7 @@ int main(int argc, char** argv)
         vis_points.points.clear();
         // End publish ropod points
         
-        }   // end if
+        }   // end if received goal
         ros::spinOnce();
         rate.sleep();
         if(rate.cycleTime() > ros::Duration(local_navigation_period) ){

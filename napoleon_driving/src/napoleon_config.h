@@ -26,7 +26,7 @@ static constexpr double SIZE_REAR = 0.10;           // How far vehicle extends b
 static constexpr double SIZE_FRONT_RAX = D_AX+0.325;// How far vehicle extends in front of rear axle
 
 // Resolutions
-static constexpr int F_PLAN = 4;    // Frequency of planning the motion [Hz]
+static constexpr int F_PLAN = 10;    // Frequency of planning the motion [Hz]
 static constexpr int F_FSTR = 10;   // How many times faster the simulation is than the planning [-]
 static constexpr int F_MODEL = F_FSTR*F_PLAN;   // Frequency of simulation [Hz]
 static constexpr double TS = 1/(double)F_MODEL;         // Sample time of model [s]
@@ -38,7 +38,7 @@ static constexpr double T_MIN_PRED = 10;            // Predict for n seconds (un
 static constexpr double T_PRED_WALL_COLLISION = 05; // Predict for n seconds if ropod collides with walls [s]
 static constexpr double T_PRED_OBS_COLLISION = 04;  // Predict for n seconds if ropod collides with obstacles [s]
 static constexpr double T_MAX_PRED = 20;            // Predict for n seconds max [s]
-static constexpr double DELTA_DOT_LIMIT = M_PI/2;   // Max steering rate per second [rad/s]
+static constexpr double DELTA_DOT_LIMIT = M_PI/2*2.5;   // Max steering rate per second [rad/s]
 static constexpr double CUTOFF_FREQ = 1.0;          // Cutoff frequency for low pass filter to simulate steering delay [Hz]
 static constexpr double V_CRUISING = 1.4;           // Max velocity [m/s] while cruising
 static constexpr double V_INTER_TURNING = 0.5;      // Max velocity [m/s] when taking a turn
@@ -57,7 +57,7 @@ static constexpr double REACHEDTARGETTRESHOLD = 1.0;  // When x [m] removed from
 
 // Performance based on position in environment
 static constexpr double START_STEERING_EARLY = 0.1;     // Start steering earlier by x [m]
-static constexpr double ENTRY_LENGTH = 1.8;             // Length of entries before intersections [m]
+static constexpr double ENTRY_LENGTH = 2.2;             // Length of entries before intersections [m]
 static constexpr double ROTATED_ENOUGH_TRES = M_PI/8;   // Stop turning when within x rad of the new corridor
 static constexpr double OBS_AVOID_MARGIN = 0.2;         // Margin between ropod and obstacles at full speed [m]
 static constexpr double DILATE_ROPOD_ALIGNING = 0.90;   // Dilation from center (so actually this value -size_side if measured from side of vehicle)
@@ -65,7 +65,7 @@ static constexpr double DILATE_ROPOD_ALIGNING = 0.90;   // Dilation from center 
 static constexpr double SHARP_ANGLE_TRESHOLD = 0.1;     // Angle how much the next hallway must be sharper than perpendicular to be considered sharp [rad]
 
 // Limits
-static constexpr double A_MAX = 1.0;                    // Maximum acceleration magnitude [m/s^2]
+static constexpr double A_MAX = 0.5*2.5;                    // Maximum acceleration magnitude [m/s^2]
 
 // Obstacle
 static constexpr double V_OBS_OVERTAKE_MAX = 0.1;       // Max speed an obstacle can have to overtake is [m/s]

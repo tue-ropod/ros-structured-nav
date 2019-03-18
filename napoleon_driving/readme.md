@@ -1,4 +1,5 @@
-# Napoleon driving
+# Napoleon driving - under construction
+All animations will be available on March 20th.
 
 Wait before crossing until the motion planner predicts that it can complete the intersection in a certain time
 ![Wait before crossing](figures/v26_crossing_v6.gif?raw=true "Wait before crossing")

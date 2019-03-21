@@ -38,7 +38,7 @@ static constexpr double T_MIN_PRED = 10;            // Predict for n seconds (un
 static constexpr double T_PRED_WALL_COLLISION = 05; // Predict for n seconds if ropod collides with walls [s]
 static constexpr double T_PRED_OBS_COLLISION = 04;  // Predict for n seconds if ropod collides with obstacles [s]
 static constexpr double T_MAX_PRED = 20;            // Predict for n seconds max [s]
-static constexpr double DELTA_DOT_LIMIT = M_PI/2*2.5;   // Max steering rate per second [rad/s]
+static constexpr double DELTA_DOT_LIMIT = M_PI/2;   // Max steering rate per second [rad/s]
 static constexpr double CUTOFF_FREQ = 1.0;          // Cutoff frequency for low pass filter to simulate steering delay [Hz]
 static constexpr double V_CRUISING = 1.4;           // Max velocity [m/s] while cruising
 static constexpr double V_INTER_TURNING = 0.5;      // Max velocity [m/s] when taking a turn
@@ -65,7 +65,7 @@ static constexpr double DILATE_ROPOD_ALIGNING = 0.90;   // Dilation from center 
 static constexpr double SHARP_ANGLE_TRESHOLD = 0.1;     // Angle how much the next hallway must be sharper than perpendicular to be considered sharp [rad]
 
 // Limits
-static constexpr double A_MAX = 0.5*2.5;                    // Maximum acceleration magnitude [m/s^2]
+static constexpr double A_MAX = 0.5;                    // Maximum acceleration magnitude [m/s^2]
 
 // Obstacle
 static constexpr double V_OBS_OVERTAKE_MAX = 0.1;       // Max speed an obstacle can have to overtake is [m/s]

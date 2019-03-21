@@ -28,7 +28,8 @@
 #include <std_msgs/Bool.h>
 #include <stdlib.h> 
 
-double ropod_x = 0, ropod_y = 0, quaternion_x = 0, quaternion_y = 0, quaternion_z = 0, quaternion_w = 0, ropod_theta = 0, siny_cosp = 0, cosy_cosp = 0;
+double ropod_x = 0, ropod_y = 0, ropod_theta = 0;
+double this_amcl_x = 0, this_amcl_y = 0, quaternion_x = 0, quaternion_y = 0, quaternion_z = 0, quaternion_w = 0, this_amcl_theta = 0, siny_cosp = 0, cosy_cosp = 0;
 double odom_xdot_ropod_global = 0, odom_ydot_ropod_global = 0, odom_thetadot_global = 0, odom_phi_local = 0, odom_phi_global = 0, odom_vropod_global = 0;
 int no_obs = 0;
 ed_gui_server::objPosVel current_obstacle;
@@ -125,8 +126,8 @@ void getAmclPoseCallback(const geometry_msgs::PoseWithCovarianceStamped::ConstPt
 {
     //ROS_INFO("Amcl pose received");
     //ROS_INFO("X: %f, Y: %f", pose_msg->pose.pose.position.x, pose_msg->pose.pose.position.y);
-    ropod_x = pose_msg->pose.pose.position.x;
-    ropod_y = pose_msg->pose.pose.position.y;
+    this_amcl_x = pose_msg->pose.pose.position.x;
+    this_amcl_y = pose_msg->pose.pose.position.y;
     quaternion_x = pose_msg->pose.pose.orientation.x;
     quaternion_y = pose_msg->pose.pose.orientation.y;
     quaternion_z = pose_msg->pose.pose.orientation.z;
@@ -135,7 +136,7 @@ void getAmclPoseCallback(const geometry_msgs::PoseWithCovarianceStamped::ConstPt
     // yaw (z-axis rotation)
     siny_cosp = +2.0 * (quaternion_w * quaternion_z + quaternion_x * quaternion_y);
     cosy_cosp = +1.0 - 2.0 * (quaternion_y * quaternion_y + quaternion_z * quaternion_z);  
-    ropod_theta = atan2(siny_cosp, cosy_cosp);
+    this_amcl_theta = atan2(siny_cosp, cosy_cosp);
 }
 
 int main(int argc, char** argv)
@@ -247,6 +248,9 @@ int main(int argc, char** argv)
     double y_rearax_0 = y_ropod_0 - D_AX*sin(theta_0); // Y position of center of rear axle [m]
     double x_rearax; // X position of center of rear axle [m]
     double y_rearax; // Y position of center of rear axle [m]
+    double prev_amcl_x = 0; // Used to update position with amcl or 'predict' new pose
+    double prev_amcl_y = 0;
+    double prev_amcl_theta = 0;
 
     static constexpr int size_m = F_MODEL*(T_MAX_PRED+1)+1;  // Array size for predictions that run at F_MODEL
     static constexpr int size_p = F_PLAN*(T_MAX_PRED+1)+1;   // Array size for predictions that run at F_PLAN
@@ -462,6 +466,24 @@ int main(int argc, char** argv)
         n = i*F_FSTR+1;
         i = i+1;
 
+        // AMCL data (around 3Hz) - update to AMCL data if new AMCL pose received
+        // otherwise make a guess
+        if (this_amcl_x == prev_amcl_x && this_amcl_y == prev_amcl_y && this_amcl_theta == prev_amcl_theta) {
+            // No AMCL update, so estimate initial values for prediction
+            ropod_x = pred_x_ropod[1];
+            ropod_y = pred_y_ropod[1];
+            ropod_theta = pred_plan_theta[1];
+        } else {
+            // Set latest values from AMCL to previous AMCL values for next iteration
+            // And take AMCL values as initial for the prediction
+            prev_amcl_x = this_amcl_x;
+            prev_amcl_y = this_amcl_y;
+            prev_amcl_theta = this_amcl_theta;
+            ropod_x = this_amcl_x;
+            ropod_y = this_amcl_y;
+            ropod_theta = this_amcl_theta;
+        }
+
         //ROS_INFO("Ropod x: %f / Ropod y: %f / Theta: %f", ropod_x, ropod_y, ropod_theta);
         //ROS_INFO("xdot: %f / ydot: %f / thetadot %f", odom_xdot_ropod_global, odom_ydot_ropod_global, odom_thetadot_global);
         //ROS_INFO("ropodx: %f / ropody: %f / ropodtheta %f", ropod_x, ropod_y, ropod_theta);
@@ -490,7 +512,12 @@ int main(int argc, char** argv)
             pred_phi[0] = odom_phi_local; // On ropod
             // pred_phi[0] = odom_phi_global-ropod_theta; // In sim (rmstart)
             pred_theta[0] = ropod_theta;
-            pred_v_ropod[0] = odom_vropod_global;
+            // pred_v_ropod[0] = odom_vropod_global;
+            pred_v_ropod[0] = control_v;
+            if (abs(odom_vropod_global-control_v) > 0.5) {
+                ROS_INFO("Difference between control and actual velocity > 0.5, correcting now.");
+                pred_v_ropod[0] = odom_vropod_global;
+            }
             pred_xdot[0] = pred_v_ropod[0]*cos(pred_phi[0])*cos(ropod_theta);   // xdot of rearaxle in global frame
             pred_ydot[0] = pred_v_ropod[0]*cos(pred_phi[0])*sin(ropod_theta);   // ydot of rearaxle in global frame
             pred_thetadot[0] = pred_v_ropod[0]*1/D_AX*sin(pred_phi[0]);

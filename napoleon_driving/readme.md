@@ -19,7 +19,8 @@ The tube width is immediately narrowed if the obstacle has a high velocity. If t
 ![Turning right with different wall angles](figures/v26_simulation_different_turn_angles.gif?raw=true "Turning right with different wall angles")
 
 ### Driving in a challenging environment
-![Driving in a challenging environment](figures/v26_simulation.gif?raw=true "Driving in a challenging environment")
+Tube is indicated in light grey.
+![Driving in a challenging environment](figures/v26_env_v3.gif?raw=true "Driving in a challenging environment")
 
 ### Prediction plotting visualized in the same environment
-![Prediction plotting visualized in the same environment](figures/v26_prediction_2.gif?raw=true "Prediction plotting visualized in the same environment")
+![Prediction plotting visualized in the same environment](figures/v26_env_v3_prediction.gif?raw=true "Prediction plotting visualized in the same environment")

@@ -144,8 +144,8 @@ bool ManeuverNavigation:: gotoGoal(const geometry_msgs::PoseStamped& goal)
 bool ManeuverNavigation:: gotoGoal(const maneuver_navigation::Goal& goal) 
 {        
     mn_goal_ = goal;
-    simple_goal_ = false;
-    append_new_maneuver_ = true;
+    simple_goal_ = false;    
+    append_new_maneuver_ = mn_goal_.conf.append_new_maneuver;
     manv_nav_state_ = MANV_NAV_MAKE_INIT_PLAN;    
     local_nav_state_ = LOC_NAV_IDLE;
     return true; // TODO: implement

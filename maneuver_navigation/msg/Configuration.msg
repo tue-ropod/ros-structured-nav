@@ -1,2 +1,3 @@
 bool use_line_planner
 bool precise_goal
+bool append_new_maneuver

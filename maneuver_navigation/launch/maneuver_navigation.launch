@@ -4,6 +4,7 @@
         <arg name="robotName" default="ropod"/>  
         <arg name="laser1_name" value ="laser"/>
         <arg name="map_file" default="/home/cesar/ropod-project-software/catkin_workspace/src/applications/occupancy_grids/brsu/brsu-c-floor0_osm/map.yaml" />
+<!--         <arg name="map_file" default="/home/cesar/ropod-project-software/catkin_workspace/src/applications/occupancy_grids/agaplesion/basement_osm/map.yaml" /> -->
         <!-- <arg name="map_file" default="$(find ed_object_models)/models/hospital_test_amcl/walls/map_amcl.yaml" /> -->
         <!-- <arg name="map_file" default="$(find ropod_navigation_test)/config/amk-f064/map.yaml"/> -->
 		<!-- <arg name="map_file" default="$(find ed_object_models)/models/tue_hallway_RLtoAL/walls/shape//map.yaml"/> -->

@@ -88,6 +88,7 @@ int main(int argc, char** argv)
     ros::Subscriber reinit_planner_sub = n.subscribe<std_msgs::Bool>("/route_navigation/set_load_attached", 10, loadAttachedCallback);
    // ros::Publisher  reinit_localcostmap_footprint_sub = n.advertise<geometry_msgs::Polygon>("/maneuver_navigation/local_costmap/footprint", 1);
     ros::Publisher  goal_visualisation_pub_ = n.advertise<geometry_msgs::PoseStamped>("/maneuver_navigation/goal_rviz", 1);
+    ros::Publisher feedback_pub_ = n.advertise<maneuver_navigation::Feedback>("/route_navigation/feedback", 1);
         
 //     /move_base_simple/goal
     tf::TransformListener tf( ros::Duration(10) );
@@ -104,8 +105,14 @@ int main(int argc, char** argv)
     {
         prediction_feasibility_check_cycle_time += local_navigation_period;
         // Execute local navigation
-        maneuver_navigator.callLocalNavigationStateMachine();
-        
+        int local_result = maneuver_navigator.callLocalNavigationStateMachine();
+        // the local result is SUCCESS when maneuver_nav reaches the final goal (i.e. not just the local one)
+        if (local_result == maneuver_navigation::Feedback::SUCCESS)
+        {
+            maneuver_navigation::Feedback feedback;
+            feedback.status = local_result;
+            feedback_pub_.publish(feedback);
+        }
         if (simple_goal_received)
         {
             simple_goal_received = false;             
@@ -124,9 +131,17 @@ int main(int argc, char** argv)
         
         // Execute route navigation
         if( prediction_feasibility_check_cycle_time > prediction_feasibility_check_period)
-        { 
+        {
             prediction_feasibility_check_cycle_time = 0.0;
-            maneuver_navigator.callManeuverNavigationStateMachine();
+            int result = maneuver_navigator.callManeuverNavigationStateMachine();
+            if (result != maneuver_navigation::Feedback::SUCCESS &&
+                result != maneuver_navigation::Feedback::BUSY &&
+                result != maneuver_navigation::Feedback::IDLE)
+            {
+                maneuver_navigation::Feedback feedback;
+                feedback.status = result;
+                feedback_pub_.publish(feedback);
+            }
         }
         
         

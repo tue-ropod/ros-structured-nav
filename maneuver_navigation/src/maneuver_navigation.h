@@ -62,8 +62,8 @@ public:
     bool   checkFootprintOnGlobalPlan(const std::vector<geometry_msgs::PoseStamped>& plan, const double& max_ahead_dist, double& dist_before_obs, int &index_closest_to_pose, int &index_before_obs);
     bool gotoGoal(const geometry_msgs::PoseStamped& goal);
     bool gotoGoal(const maneuver_navigation::Goal& goal);
-    void callLocalNavigationStateMachine();
-    void callManeuverNavigationStateMachine();
+    int callLocalNavigationStateMachine();
+    int callManeuverNavigationStateMachine();
     
     
    maneuver_planner::ManeuverPlanner  maneuver_planner;   
@@ -98,6 +98,12 @@ private:
    boost::shared_ptr<nav_core::BaseLocalPlanner> local_planner_;
    
    bool getRobotPose(tf::Stamped<tf::Pose> & global_pose);
+   ros::Duration timeout_duration_;
+   ros::Time timeout_timer_;
+   bool timer_running_;
+   void startTimeoutTimer();
+   bool isTimeoutReached();
+   void resetTimeoutTimer();
       
       
       

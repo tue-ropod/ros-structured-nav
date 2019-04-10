@@ -7,6 +7,8 @@ tf_(tf), nh_(nh), blp_loader_("nav_core", "nav_core::BaseLocalPlanner")
 {    
     
     initialized_ = false;
+    timeout_duration_ = ros::Duration(5.0);
+    timer_running_ = false;
 };
 
 
@@ -262,7 +264,7 @@ bool ManeuverNavigation::checkFootprintOnGlobalPlan(const std::vector<geometry_m
 }
 
 
-void ManeuverNavigation::callLocalNavigationStateMachine() 
+int ManeuverNavigation::callLocalNavigationStateMachine() 
 {
     geometry_msgs::Twist cmd_vel;
     tf::Stamped<tf::Pose> global_pose;
@@ -276,7 +278,7 @@ void ManeuverNavigation::callLocalNavigationStateMachine()
     
     switch(local_nav_state_){
         case LOC_NAV_IDLE:
-            break;                    
+            return maneuver_navigation::Feedback::IDLE;
         case LOC_NAV_SET_PLAN:
             
             if (!local_planner_->setPlan(plan))
@@ -307,7 +309,10 @@ void ManeuverNavigation::callLocalNavigationStateMachine()
                 else if (goal_free_ == false)
                     manv_nav_state_  = MANV_NAV_MAKE_INIT_PLAN; // replan maneuver until goal is free
                 else
+                {
                     manv_nav_state_   = MANV_NAV_IDLE;
+                    return maneuver_navigation::Feedback::SUCCESS;
+                }
                 
                 
             }
@@ -335,7 +340,7 @@ void ManeuverNavigation::callLocalNavigationStateMachine()
         default:
             break;
     }
-
+    return maneuver_navigation::Feedback::BUSY;
 };
 
 
@@ -352,7 +357,7 @@ bool ManeuverNavigation::getRobotPose(tf::Stamped<tf::Pose> & global_pose)
     return true;
 };
 
-void ManeuverNavigation::callManeuverNavigationStateMachine() 
+int ManeuverNavigation::callManeuverNavigationStateMachine() 
 {
     double dist_before_obs;  
     int index_closest_to_pose;
@@ -365,7 +370,7 @@ void ManeuverNavigation::callManeuverNavigationStateMachine()
     
     switch(manv_nav_state_){
         case MANV_NAV_IDLE:
-            break;          
+            return maneuver_navigation::Feedback::IDLE;
         case MANV_NAV_MAKE_INIT_PLAN:                            
             if( simple_goal_ )
             {                
@@ -410,12 +415,24 @@ void ManeuverNavigation::callManeuverNavigationStateMachine()
                 else
                 {
                     ROS_ERROR("Empty plan");
-                }                    
+                }
             }
             else
             {
                 std::cout <<  "Warning: maneuver_navigation cannot make a plan due to obstacles, inform and keep trying" << std::endl; 
                 publishZeroVelocity();  
+                if (!timer_running_)
+                {
+                    startTimeoutTimer();
+                }
+                else if (isTimeoutReached())
+                {
+                    resetTimeoutTimer();
+                    ROS_ERROR("Maneuver navigation failed due to obstacles");
+                    local_nav_state_ = LOC_NAV_IDLE;
+                    manv_nav_state_ = MANV_NAV_IDLE;
+                    return maneuver_navigation::Feedback::FAILURE_OBSTACLES;
+                }
               //  local_nav_state_ = LOC_NAV_IDLE;
                 // manv_nav_state_   = MANV_NAV_IDLE; 
             }
@@ -484,9 +501,29 @@ void ManeuverNavigation::callManeuverNavigationStateMachine()
         default:
             break;
     }    
+    return maneuver_navigation::Feedback::BUSY;
 
 };
 
+void ManeuverNavigation::startTimeoutTimer()
+{
+    timeout_timer_ = ros::Time::now();
+    timer_running_ = true;
+}
 
- 
+bool ManeuverNavigation::isTimeoutReached()
+{
+    if (!timer_running_ || // timer hasn't been started yet
+        ros::Time::now() - timeout_timer_ > timeout_duration_)
+    {
+        return true;
+    }
+    return false;
+}
+
+void ManeuverNavigation::resetTimeoutTimer()
+{
+    timer_running_ = false;
+}
+
 }

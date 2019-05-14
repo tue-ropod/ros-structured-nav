@@ -62,8 +62,8 @@ public:
     bool   checkFootprintOnGlobalPlan(const std::vector<geometry_msgs::PoseStamped>& plan, const double& max_ahead_dist, double& dist_before_obs, int &index_closest_to_pose, int &index_before_obs);
     bool gotoGoal(const geometry_msgs::PoseStamped& goal);
     bool gotoGoal(const maneuver_navigation::Goal& goal);
-    int callLocalNavigationStateMachine();
-    int callManeuverNavigationStateMachine();
+    void callLocalNavigationStateMachine();
+    maneuver_navigation::Feedback callManeuverNavigationStateMachine();
     
     
    maneuver_planner::ManeuverPlanner  maneuver_planner;   

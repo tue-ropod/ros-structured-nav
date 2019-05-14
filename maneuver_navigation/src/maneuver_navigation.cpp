@@ -264,7 +264,7 @@ bool ManeuverNavigation::checkFootprintOnGlobalPlan(const std::vector<geometry_m
 }
 
 
-int ManeuverNavigation::callLocalNavigationStateMachine() 
+void ManeuverNavigation::callLocalNavigationStateMachine() 
 {
     geometry_msgs::Twist cmd_vel;
     tf::Stamped<tf::Pose> global_pose;
@@ -278,7 +278,7 @@ int ManeuverNavigation::callLocalNavigationStateMachine()
     
     switch(local_nav_state_){
         case LOC_NAV_IDLE:
-            return maneuver_navigation::Feedback::IDLE;
+            break;
         case LOC_NAV_SET_PLAN:
             
             if (!local_planner_->setPlan(plan))
@@ -309,10 +309,7 @@ int ManeuverNavigation::callLocalNavigationStateMachine()
                 else if (goal_free_ == false)
                     manv_nav_state_  = MANV_NAV_MAKE_INIT_PLAN; // replan maneuver until goal is free
                 else
-                {
-                    manv_nav_state_   = MANV_NAV_IDLE;
-                    return maneuver_navigation::Feedback::SUCCESS;
-                }
+                    manv_nav_state_   = MANV_NAV_DONE;                    
                 
                 
             }
@@ -340,7 +337,7 @@ int ManeuverNavigation::callLocalNavigationStateMachine()
         default:
             break;
     }
-    return maneuver_navigation::Feedback::BUSY;
+
 };
 
 
@@ -357,20 +354,26 @@ bool ManeuverNavigation::getRobotPose(tf::Stamped<tf::Pose> & global_pose)
     return true;
 };
 
-int ManeuverNavigation::callManeuverNavigationStateMachine() 
+maneuver_navigation::Feedback ManeuverNavigation::callManeuverNavigationStateMachine() 
 {
     double dist_before_obs;  
     int index_closest_to_pose;
     int index_before_obs;
     std::vector<geometry_msgs::PoseStamped> old_plan;  
     bool is_plan_free;
+    maneuver_navigation::Feedback feedback;
+    
+    feedback.traj_free =  false;
+    feedback.dist_to_obs =  false;
+    feedback.status = maneuver_navigation::Feedback::BUSY;    
     
     tf::Stamped<tf::Pose> global_pose;
     geometry_msgs::PoseStamped start;    
     
     switch(manv_nav_state_){
         case MANV_NAV_IDLE:
-            return maneuver_navigation::Feedback::IDLE;
+            feedback.status = maneuver_navigation::Feedback::IDLE;
+            return feedback;
         case MANV_NAV_MAKE_INIT_PLAN:                            
             if( simple_goal_ )
             {                
@@ -408,6 +411,7 @@ int ManeuverNavigation::callManeuverNavigationStateMachine()
             {
                 if( plan.size()>0 )
                 {
+                    resetTimeoutTimer();
                     simple_goal_ = true; // the structured goal is only the first time is received and succesful                
                     local_nav_state_ = LOC_NAV_SET_PLAN;
                     manv_nav_state_  = MANV_NAV_BUSY;
@@ -431,7 +435,8 @@ int ManeuverNavigation::callManeuverNavigationStateMachine()
                     ROS_ERROR("Maneuver navigation failed due to obstacles");
                     local_nav_state_ = LOC_NAV_IDLE;
                     manv_nav_state_ = MANV_NAV_IDLE;
-                    return maneuver_navigation::Feedback::FAILURE_OBSTACLES;
+                    feedback.status = maneuver_navigation::Feedback::FAILURE_OBSTACLES;
+                    return feedback;
                 }
               //  local_nav_state_ = LOC_NAV_IDLE;
                 // manv_nav_state_   = MANV_NAV_IDLE; 
@@ -498,10 +503,14 @@ int ManeuverNavigation::callManeuverNavigationStateMachine()
              }
              
             break;
+        case MANV_NAV_DONE:   
+            manv_nav_state_ = MANV_NAV_IDLE;
+            feedback.status = maneuver_navigation::Feedback::SUCCESS;
+            return feedback;
         default:
             break;
     }    
-    return maneuver_navigation::Feedback::BUSY;
+    return feedback;
 
 };
 

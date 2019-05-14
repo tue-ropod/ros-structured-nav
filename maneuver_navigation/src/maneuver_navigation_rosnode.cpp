@@ -105,14 +105,8 @@ int main(int argc, char** argv)
     {
         prediction_feasibility_check_cycle_time += local_navigation_period;
         // Execute local navigation
-        int local_result = maneuver_navigator.callLocalNavigationStateMachine();
+        maneuver_navigator.callLocalNavigationStateMachine();
         // the local result is SUCCESS when maneuver_nav reaches the final goal (i.e. not just the local one)
-        if (local_result == maneuver_navigation::Feedback::SUCCESS)
-        {
-            maneuver_navigation::Feedback feedback;
-            feedback.status = local_result;
-            feedback_pub_.publish(feedback);
-        }
         if (simple_goal_received)
         {
             simple_goal_received = false;             
@@ -133,13 +127,10 @@ int main(int argc, char** argv)
         if( prediction_feasibility_check_cycle_time > prediction_feasibility_check_period)
         {
             prediction_feasibility_check_cycle_time = 0.0;
-            int result = maneuver_navigator.callManeuverNavigationStateMachine();
-            if (result != maneuver_navigation::Feedback::SUCCESS &&
-                result != maneuver_navigation::Feedback::BUSY &&
-                result != maneuver_navigation::Feedback::IDLE)
+            maneuver_navigation::Feedback feedback = maneuver_navigator.callManeuverNavigationStateMachine();
+            if (feedback.status != maneuver_navigation::Feedback::BUSY &&
+                feedback.status != maneuver_navigation::Feedback::IDLE)
             {
-                maneuver_navigation::Feedback feedback;
-                feedback.status = result;
                 feedback_pub_.publish(feedback);
             }
         }

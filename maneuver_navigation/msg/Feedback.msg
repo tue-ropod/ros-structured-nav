@@ -1,3 +1,11 @@
+uint16 SUCCESS = 0
+uint16 BUSY = 1
+uint16 IDLE = 2
+uint16 FAILURE_OBSTACLES = 3
+uint16 FAILURE_LOCAL_PLANNER_INFEASIBLE = 4
+uint16 FAILURE_CANNOT_GET_START_POSE = 5
+uint16 FAILURE_EMPTY_PLAN = 6
 bool traj_free
 float32 dist_to_obs
+uint16 status
 

@@ -454,12 +454,13 @@ maneuver_navigation::Feedback ManeuverNavigation::callManeuverNavigationStateMac
                 tf::poseStampedTFToMsg(global_pose, start);     
                 
                 // Find first current position on plan and then move certain disctance ahead to make the plan.
-                is_plan_free = checkFootprintOnGlobalPlan(plan, MAX_AHEAD_DIST_BEFORE_REPLANNING, dist_before_obs, index_closest_to_pose, index_before_obs);
+                // is_plan_free = checkFootprintOnGlobalPlan(plan, MAX_AHEAD_DIST_BEFORE_REPLANNING, dist_before_obs, index_closest_to_pose, index_before_obs);
                 old_plan.clear();
                 old_plan.insert(old_plan.begin(), plan.begin()+index_closest_to_pose, plan.begin()+index_before_obs);
                 start.pose.position = plan[index_before_obs].pose.position;
                                          
                 goal_free_ = maneuver_planner.makePlan(start,goal_, plan);
+                plan.insert(plan.begin(),old_plan.begin(), old_plan.end());
                 if(goal_free_)
                 {
                     if( plan.size()>0 )

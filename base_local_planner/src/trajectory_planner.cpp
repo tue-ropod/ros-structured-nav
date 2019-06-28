@@ -68,7 +68,7 @@ namespace base_local_planner{
 
       max_vel_x_ = config.max_vel_x;
       min_vel_x_ = config.min_vel_x;
-      
+
       max_vel_th_ = config.max_vel_theta;
       min_vel_th_ = config.min_vel_theta;
       min_in_place_vel_th_ = config.min_in_place_vel_theta;
@@ -87,7 +87,7 @@ namespace base_local_planner{
         double resolution = costmap_.getResolution();
         gdist_scale_ *= resolution;
         pdist_scale_ *= resolution;
-        occdist_scale_ *= resolution;       
+        occdist_scale_ *= resolution;
       }
 
       oscillation_reset_dist_ = config.oscillation_reset_dist;
@@ -111,7 +111,7 @@ namespace base_local_planner{
       heading_lookahead_ = config.heading_lookahead;
 
       holonomic_robot_ = config.holonomic_robot;
-      
+
       backup_vel_ = config.escape_vel;
 
       dwa_ = config.dwa;
@@ -136,7 +136,7 @@ namespace base_local_planner{
       }
 
       y_vels_ = y_vels;
-      
+
   }
 
   TrajectoryPlanner::TrajectoryPlanner(WorldModel& world_model,
@@ -344,12 +344,12 @@ namespace base_local_planner{
           double path_dist_internal = (double) path_dist;
           if ( meter_scoring_ )
               path_dist_internal *= costmap_.getResolution();
-          
+
 //           if(path_distance_max_ > 0.0 && !rotating_left && !rotating_right && path_dist_internal > path_distance_max_){
           traj.path_dist_traj_ = path_dist_internal;
           if(path_distance_max_ > 0.0 && path_dist_internal > path_distance_max_){
-              path_dist*=10.0;              
-//              traj.cost_ = -3.0;             
+              path_dist*=10.0;
+//              traj.cost_ = -3.0;
              return;
           }
         }
@@ -377,72 +377,60 @@ namespace base_local_planner{
     double cost = -1.0;
     if (!heading_scoring_) {
       cost = pdist_scale_ * path_dist + goal_dist * gdist_scale_ + occdist_scale_ * occ_cost;
-    } else {        
-      cost = occdist_scale_ * occ_cost + pdist_scale_ * path_dist + 10*0.3 * heading_diff + goal_dist * gdist_scale_;      
+    } else {
+      cost = occdist_scale_ * occ_cost + pdist_scale_ * path_dist + 1000*0.3 * heading_diff + goal_dist * gdist_scale_;
     }
     traj.cost_ = cost;
   }
-
-// //   double TrajectoryPlanner::headingDiff(int cell_x, int cell_y, double x, double y, double heading){
-// //     unsigned int goal_cell_x, goal_cell_y;
-// // 
-// //     // find a clear line of sight from the robot's cell to a farthest point on the path
-// //     for (int i = global_plan_.size() - 1; i >=0; --i) {
-// //       if (costmap_.worldToMap(global_plan_[i].pose.position.x, global_plan_[i].pose.position.y, goal_cell_x, goal_cell_y)) {
-// //         if (lineCost(cell_x, goal_cell_x, cell_y, goal_cell_y) >= 0) {
-// //           double gx, gy;
-// //           costmap_.mapToWorld(goal_cell_x, goal_cell_y, gx, gy);
-// //           return fabs(angles::shortest_angular_distance(heading, atan2(gy - y, gx - x)));
-// //         }
-// //       }
-// //     }
-// //     return DBL_MAX;
-// //   }
   
   double TrajectoryPlanner::headingDiff(int cell_x, int cell_y, double x, double y, double heading){
     unsigned int goal_cell_x, goal_cell_y;
 
     // find closest current position to global plan and take the heading from there
     double dist_to_path_min = 1e3;
-    double dist_to_path; 
+    double dist_to_path;
     tf::Pose pose_temp;
     tf::Quaternion quat_temp;
-    int look_ahead_samples  = 3;
+    int look_ahead_samples  = 5;
     int index_plan;
+    int i_curr_loc = 0;;
     double yaw, pitch, roll;
     for (int i = global_plan_.size() - 1; i >=0; --i) {
         dist_to_path = hypot(global_plan_[i].pose.position.x-x,global_plan_[i].pose.position.y-y);
         if(dist_to_path < dist_to_path_min){
             dist_to_path_min = dist_to_path;
-        }else{ // found minimum, take diff.
-            index_plan = std::min<int>(i + look_ahead_samples, global_plan_.size() - 1);
-            quat_temp.setW(global_plan_[index_plan].pose.orientation.w);    
-            quat_temp.setX(global_plan_[index_plan].pose.orientation.x);    
-            quat_temp.setY(global_plan_[index_plan].pose.orientation.y);    
-            quat_temp.setZ(global_plan_[index_plan].pose.orientation.z);    
-            pose_temp.setRotation(quat_temp);
-            pose_temp.getBasis().getEulerYPR(yaw, pitch, roll);     
-            
-            if ( index_plan > i && costmap_.worldToMap(global_plan_[index_plan].pose.position.x, global_plan_[index_plan].pose.position.y, goal_cell_x, goal_cell_y) ) {
-                double gx, gy;
-                costmap_.mapToWorld(goal_cell_x, goal_cell_y, gx, gy);
-                return fabs(angles::shortest_angular_distance(heading, atan2(gy - y, gx - x)));
-            }else{
-                return fabs(angles::shortest_angular_distance(heading, yaw) );
-            }                                    
-        }        
-    }    
-    quat_temp.setW(global_plan_[0].pose.orientation.w);    
-    quat_temp.setX(global_plan_[0].pose.orientation.x);    
-    quat_temp.setY(global_plan_[0].pose.orientation.y);    
-    quat_temp.setZ(global_plan_[0].pose.orientation.z); 
-    pose_temp.setRotation(quat_temp);
-    pose_temp.getBasis().getEulerYPR(yaw, pitch, roll);            
-    return fabs(angles::shortest_angular_distance(heading, yaw) );
-    
-  }  
-  
+             i_curr_loc = i;
+        }
+    }
 
+    index_plan = std::min<int>(i_curr_loc + look_ahead_samples, global_plan_.size() - 1);
+    quat_temp.setW(global_plan_[i_curr_loc].pose.orientation.w);
+    quat_temp.setX(global_plan_[i_curr_loc].pose.orientation.x);
+    quat_temp.setY(global_plan_[i_curr_loc].pose.orientation.y);
+    quat_temp.setZ(global_plan_[i_curr_loc].pose.orientation.z);
+    pose_temp.setRotation(quat_temp);
+    pose_temp.getBasis().getEulerYPR(yaw, pitch, roll);
+
+    //ROS_INFO("READ HEADING: %f, %f %d, %d\n", heading, yaw, global_plan_.size(), i_curr_loc);
+    return fabs(AngleDifference(heading, yaw) );
+
+    //if ( index_plan > i && costmap_.worldToMap(global_plan_[index_plan].pose.position.x, global_plan_[index_plan].pose.position.y, goal_cell_x, goal_cell_y) ) {
+        //double gx, gy;
+        //costmap_.mapToWorld(goal_cell_x, goal_cell_y, gx, gy);
+        //ROS_WARN("READ HEADING MIDDLE: %f, %f\n", heading, atan2(global_plan_[index_plan].pose.position.y - global_plan_[i].pose.position.y, global_plan_[index_plan].pose.position.x - global_plan_[i].pose.position.x) );
+        ////return fabs(angles::shortest_angular_distance(heading, atan2(gy - y, gx - x)));
+        //return fabs(AngleDifference(heading, atan2(global_plan_[index_plan].pose.position.y - global_plan_[i].pose.position.y, global_plan_[index_plan].pose.position.x - global_plan_[i].pose.position.x)));
+    //}else{
+        //ROS_WARN("READ HEADING REACHED END: %f, %f\n", heading, yaw);
+        //return fabs(AngleDifference(heading, yaw) );
+    //}
+
+
+  }
+double TrajectoryPlanner::AngleDifference( double angle1, double angle2 )
+{
+    return fabs(angles::shortest_angular_distance(angle1, angle2));
+}
 
   //calculate the cost of a ray-traced line
   double TrajectoryPlanner::lineCost(int x0, int x1,
@@ -704,10 +692,10 @@ namespace base_local_planner{
         }
       }
     } // end if not escaping
-        
+
     // Cesar Lopez: return and do not try anything new.
     // return *best_traj;
-    
+
     //next we want to generate trajectories for rotating in place:
     // Cesar Lopez: only if we have not found a good trajectory
     vtheta_samp = min_vel_theta;
@@ -741,12 +729,12 @@ namespace base_local_planner{
             //comp_traj->getEndpoint(x_r, y_r, th_r); comp_traj->
             x_r += heading_lookahead_ * cos(th_r);
             y_r += heading_lookahead_ * sin(th_r);
-            
+
             double dist_to_goal =  hypot( final_goal_x_ - x, final_goal_y_ - y );
             //make sure that we'll be looking at a legal cell
             if(final_goal_position_valid_ && dist_to_goal> 0.2){
                 double ahead_gdist =  hypot( final_goal_x_ - x_r, final_goal_y_ - y_r );
-           if (ahead_gdist < heading_dist) { 
+           if (ahead_gdist < heading_dist) {
 //                 if we haven't already tried rotating left since we've moved forward
 //                 if (vtheta_samp < 0 && !stuck_left) {
 //                 swap = best_traj;
@@ -932,7 +920,7 @@ namespace base_local_planner{
        best_traj = comp_traj;
        comp_traj = swap;
        }
-       
+
 
     //we'll allow moving backwards slowly even when the static map shows it as blocked
     swap = best_traj;
@@ -970,7 +958,7 @@ namespace base_local_planner{
     //if the trajectory failed because the footprint hits something, we're still going to back up
     if(best_traj->cost_ == -1.0)
       best_traj->cost_ = 1.0;
-    
+
    if(stuck_right || stuck_left){
      ROS_INFO("stuck") ;
    }

@@ -382,7 +382,7 @@ namespace base_local_planner{
     }
     traj.cost_ = cost;
   }
-  
+
   double TrajectoryPlanner::headingDiff(int cell_x, int cell_y, double x, double y, double heading){
     unsigned int goal_cell_x, goal_cell_y;
 

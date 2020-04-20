@@ -1,70 +1,71 @@
 <?xml version="1.0"?>
 <launch>
 
-        <arg name="robotName" default="ropod"/>  
-        <arg name="laser1_name" value ="laser"/>
-        <arg name="map_file" default="/home/cesar/ropod-project-software/catkin_workspace/src/applications/occupancy_grids/brsu/brsu-c-floor0_osm/map.yaml" />
-<!--         <arg name="map_file" default="/home/cesar/ropod-project-software/catkin_workspace/src/applications/occupancy_grids/agaplesion/basement_osm/map.yaml" /> -->
-        <!-- <arg name="map_file" default="$(find ed_object_models)/models/hospital_test_amcl/walls/map_amcl.yaml" /> -->
-        <!-- <arg name="map_file" default="$(find ropod_navigation_test)/config/amk-f064/map.yaml"/> -->
-		<!-- <arg name="map_file" default="$(find ed_object_models)/models/tue_hallway_RLtoAL/walls/shape//map.yaml"/> -->
-        <!--  <arg name="map_file" default="/home/cesar/ropod-project-software/catkin_workspace/src/applications/occupancy_grids/tue/lab-level/map.yaml"/> -->       
+    <arg name="robotName" default="ropod"/>
+    <arg name="laser1_name" value ="laser"/>
+    <arg name="sim_mode" default="false"/>
+    <arg name="map_file" default="/home/cesar/ropod-project-software/catkin_workspace/src/applications/occupancy_grids/brsu/brsu-c-floor0_osm/map.yaml" />
+    <!-- <arg name="map_file" default="/home/cesar/ropod-project-software/catkin_workspace/src/applications/occupancy_grids/agaplesion/basement_osm/map.yaml" /> -->
+    <!-- <arg name="map_file" default="$(find ed_object_models)/models/hospital_test_amcl/walls/map_amcl.yaml" /> -->
+    <!-- <arg name="map_file" default="$(find ropod_navigation_test)/config/amk-f064/map.yaml"/> -->
+    <!-- <arg name="map_file" default="$(find ed_object_models)/models/tue_hallway_RLtoAL/walls/shape//map.yaml"/> -->
+    <!--  <arg name="map_file" default="/home/cesar/ropod-project-software/catkin_workspace/src/applications/occupancy_grids/tue/lab-level/map.yaml"/> -->
 
-        
-   <!-- Run the map server -->
-     <node name="map_server" pkg="map_server" type="map_server" args="$(arg map_file)" />
-        
-    <!--- Run AMCL -->
-    <node pkg="amcl" type="amcl" name="amcl">
-        <remap from="scan" to="/$(arg robotName)/$(arg laser1_name)/scan"/>
+    <group unless="$(arg sim_mode)">
+        <!-- Run the map server -->
+        <node name="map_server" pkg="map_server" type="map_server" args="$(arg map_file)" />
 
-        <!--- Odometery model parameters  -->
-        <param name="odom_model_type" value="omni"/>
-        <param name="odom_alpha1" value="7.0"/>
-        <param name="odom_alpha2" value="5.0"/>
-        <param name="odom_alpha3" value="5.0"/>
-        <param name="odom_alpha4" value="5.0"/>
-        <param name="odom_alpha5" value="7.0"/>
-        <param name="odom_frame_id" value="/ropod/odom"/>
-        <param name="base_frame_id" value="/ropod/base_link"/>
-        <param name="global_frame_id" value="/map"/>
+        <!--- Run AMCL -->
+        <node pkg="amcl" type="amcl" name="amcl">
+            <remap from="scan" to="/$(arg robotName)/$(arg laser1_name)/scan"/>
 
-        <!-- Overall filter parameters -->
-        <param name="min_particles" value="200"/>
-        <param name="max_particles" value="1000"/>
-        <param name="kld_err" value="0.01"/>
-        <param name="kld_z" value="0.99"/>
-        <param name="update_min_d" value="0.05"/>
-        <param name="update_min_a" value="0.01"/>
-        <param name="resample_interval" value="2"/>
-        <param name="transform_tolerance" value="0.1" />
-        <param name="recovery_alpha_slow" value="0.0"/>
-        <param name="recovery_alpha_fast" value="0.0"/>
-        <param name="gui_publish_rate" value="-1"/>
-        <param name="use_map_topic" value="true"/>
-        <param name="first_map_only" value="true"/>
+            <!--- Odometery model parameters  -->
+            <param name="odom_model_type" value="omni"/>
+            <param name="odom_alpha1" value="7.0"/>
+            <param name="odom_alpha2" value="5.0"/>
+            <param name="odom_alpha3" value="5.0"/>
+            <param name="odom_alpha4" value="5.0"/>
+            <param name="odom_alpha5" value="7.0"/>
+            <param name="odom_frame_id" value="/ropod/odom"/>
+            <param name="base_frame_id" value="/ropod/base_link"/>
+            <param name="global_frame_id" value="/map"/>
 
-        <!--Laser model parameters -->
-        <param name="laser_min_range" value="0.04"/>
-        <param name="laser_max_range" value="4.0"/>
-        <param name="laser_max_beams" value="30"/>
-        <param name="laser_z_hit" value="0.95"/>
-        <param name="laser_z_short" value="0.01"/>
-        <param name="laser_z_max" value="0.05"/>
-        <param name="laser_z_rand" value="0.05"/>
-        <param name="laser_sigma_hit" value="0.2"/>
-        <param name="laser_lambda_short" value="0.1"/>
-        <param name="laser_likelihood_max_dist" value="1.0"/>
-        <param name="laser_model_type" value="likelihood_field"/>
-        
-        <!-- initial pose of the robot -->
-        <param name="initial_pose_x" value="59.9"/>
-        <param name="initial_pose_y" value="32.5"/>
-        <param name="initial_pose_a" value="-1.54"/>
-        
-    </node>
-   
-<!--    <node name="demo_navigation" pkg="ropod_demo_dec_2017" type="demo_navigation" output="screen">
+            <!-- Overall filter parameters -->
+            <param name="min_particles" value="200"/>
+            <param name="max_particles" value="1000"/>
+            <param name="kld_err" value="0.01"/>
+            <param name="kld_z" value="0.99"/>
+            <param name="update_min_d" value="0.05"/>
+            <param name="update_min_a" value="0.01"/>
+            <param name="resample_interval" value="2"/>
+            <param name="transform_tolerance" value="0.1" />
+            <param name="recovery_alpha_slow" value="0.0"/>
+            <param name="recovery_alpha_fast" value="0.0"/>
+            <param name="gui_publish_rate" value="-1"/>
+            <param name="use_map_topic" value="true"/>
+            <param name="first_map_only" value="true"/>
+
+            <!--Laser model parameters -->
+            <param name="laser_min_range" value="0.04"/>
+            <param name="laser_max_range" value="4.0"/>
+            <param name="laser_max_beams" value="30"/>
+            <param name="laser_z_hit" value="0.95"/>
+            <param name="laser_z_short" value="0.01"/>
+            <param name="laser_z_max" value="0.05"/>
+            <param name="laser_z_rand" value="0.05"/>
+            <param name="laser_sigma_hit" value="0.2"/>
+            <param name="laser_lambda_short" value="0.1"/>
+            <param name="laser_likelihood_max_dist" value="1.0"/>
+            <param name="laser_model_type" value="likelihood_field"/>
+
+            <!-- initial pose of the robot -->
+            <param name="initial_pose_x" value="59.9"/>
+            <param name="initial_pose_y" value="32.5"/>
+            <param name="initial_pose_a" value="-1.54"/>
+        </node>
+    </group>
+
+    <!-- <node name="demo_navigation" pkg="ropod_demo_dec_2017" type="demo_navigation" output="screen">
         <param name="move_base_server" value="/move_base" />
         <param name="move_base_feedback_topic" value="/move_base/feedback" />
         <param name="move_base_cancel_topic" value="/move_base/cancel" />        
@@ -76,31 +77,42 @@
         <rosparam file="$(find ropod_navigation_test)/config/parameters/global_costmap_params.yaml" command="load" />
         <rosparam file="$(find ropod_navigation_test)/config/parameters/local_costmap_params.yaml"  command="load"/>    
         <rosparam file="$(find ropod_navigation_test)/config/parameters/base_local_planner_params.yaml" command="load" />
-                    
-    </node>-->    
-    
+    </node> -->
+
     <!-- Launch ED -->
-<!--    <node pkg="ed" type="ed" name="ed" args="$(find ropod_navigation_test)/config/model-test-ED-hospital-osm-amcl.yaml" output="screen" >
+    <!-- <node pkg="ed" type="ed" name="ed" args="$(find ropod_navigation_test)/config/model-test-ED-hospital-osm-amcl.yaml" output="screen" >
         <remap from="~goto_action" to="/ropod_task_executor/GOTO" />
         <remap from="~undock_action" to="/ropod_task_executor/UNDOCK" />
         <remap from="~dock_action" to="/ropod_task_executor/DOCK" />
         <remap from="~debug_route_planner_result_action" to="/ropod_task_executor/debug_route_planner_result_action" />
-    </node>    -->
-    
+    </node> -->
+
     <node name="maneuver_navigation" pkg="maneuver_navigation" type="maneuver_navigation" output="screen">
-     
-        <rosparam file="$(find ropod_navigation_test)/config/parameters/costmap_common_params.yaml" command="load" ns="local_costmap" />    
-        <rosparam file="$(find ropod_navigation_test)/config/parameters/footprint_ropod.yaml" command="load" ns="local_costmap" />       
-        <rosparam file="$(find ropod_navigation_test)/config/parameters/local_costmap_params.yaml"  command="load"/>    
-        <rosparam file="$(find ropod_navigation_test)/config/parameters/teb_local_planner_params_ropod.yaml" command="load" />     
+
+        <rosparam file="$(find ropod_navigation_test)/config/parameters/costmap_common_params.yaml" command="load" ns="local_costmap" unless="$(arg sim_mode)" />
+        <rosparam file="$(find ropod_navigation_test)/config/parameters/footprint_ropod.yaml" command="load" ns="local_costmap" unless="$(arg sim_mode)" />
+        <rosparam file="$(find ropod_navigation_test)/config/parameters/local_costmap_params.yaml"  command="load" unless="$(arg sim_mode)" />
+        <rosparam file="$(find ropod_navigation_test)/config/parameters/teb_local_planner_params_ropod.yaml" command="load" unless="$(arg sim_mode)" />
+
         <param name="default_ropod_navigation_param_file" value ="$(find maneuver_navigation)/config/footprint_local_planner_params_ropod.yaml"/>
         <param name="default_ropod_load_navigation_param_file" value ="$(find maneuver_navigation)/config/footprint_local_planner_params_ropod_load.yaml"/>
-        
-        
-        <remap from="/maneuver_navigation/cmd_vel" to="/load/cmd_vel"/>
-        <remap from="odom" to="/load/odom"/>
-        
-    </node>        
-        
-    
+
+        <remap from="/maneuver_navigation/cmd_vel" to="/load/cmd_vel" unless="$(arg sim_mode)"/>
+        <remap from="odom" to="/load/odom" unless="$(arg sim_mode)"/>
+
+        <rosparam file="$(find ropod_gazebo)/ros/generated_files/$(arg robotName)/costmap_common_params.yaml" command="load" ns="global_costmap" if="$(arg sim_mode)"/>
+        <rosparam file="$(find ropod_gazebo)/ros/generated_files/$(arg robotName)/costmap_common_params.yaml" command="load" ns="local_costmap" if="$(arg sim_mode)"/>
+        <rosparam file="$(find ropod_gazebo)/ros/generated_files/$(arg robotName)/global_costmap_params.yaml" command="load" if="$(arg sim_mode)"/>
+        <rosparam file="$(find ropod_gazebo)/ros/generated_files/$(arg robotName)/local_costmap_params.yaml" command="load" if="$(arg sim_mode)"/>
+        <rosparam file="$(find ropod_gazebo)/ros/config/move_base_config/teb_local_planner_params.yaml" command="load" if="$(arg sim_mode)"/>
+
+        <remap from="/maneuver_navigation/cmd_vel" to="/$(arg robotName)/cmd_vel" if="$(arg sim_mode)" />
+        <remap from="/maneuver_navigation/goal_rviz" to="/$(arg robotName)/maneuver_navigation/goal_rviz" if="$(arg sim_mode)" />
+        <remap from="/route_navigation/simple_goal" to="/$(arg robotName)/route_navigation/simple_goal" if="$(arg sim_mode)" />
+        <remap from="/route_navigation/feedback" to="/$(arg robotName)/route_navigation/feedback" if="$(arg sim_mode)" />
+        <remap from="/route_navigation/cancel" to="/$(arg robotName)/route_navigation/cancel" if="$(arg sim_mode)" />
+        <remap from="/route_navigation/goal" to="/$(arg robotName)/route_navigation/goal" if="$(arg sim_mode)" />
+        <remap from="/route_navigation/set_load_attached" to="/$(arg robotName)/route_navigation/set_load_attached" if="$(arg sim_mode)" />
+        <remap from="~cmd_vel" to="/$(arg robotName)/cmd_vel" if="$(arg sim_mode)" />
+    </node>
 </launch>
